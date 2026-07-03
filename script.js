@@ -1274,6 +1274,8 @@ let selected = new Set();
 let canDraw = false;
 let isDrawing = false;
 let activePointerId = null;
+let strokeMode = null;
+let lastStrokeIndex = null;
 let previewTimer = null;
 let lastResult = null;
 let preparedShare = null;
@@ -1342,6 +1344,9 @@ function buildGrid() {
   selected.clear();
   canDraw = false;
   isDrawing = false;
+  activePointerId = null;
+  strokeMode = null;
+  lastStrokeIndex = null;
   lastResult = null;
   preparedShare = null;
   sharePreparationPromise = null;
@@ -1360,10 +1365,16 @@ function buildGrid() {
     cell.setAttribute("aria-label", `Square ${i + 1}`);
 
     cell.addEventListener("pointerdown", (event) => {
+      if (!canDraw) return;
+
       event.preventDefault();
       isDrawing = true;
       activePointerId = event.pointerId;
-      toggleCell(i, cell);
+      strokeMode = selected.has(i) ? "erase" : "paint";
+      lastStrokeIndex = null;
+
+      cell.setPointerCapture?.(event.pointerId);
+      applyStroke(i, cell);
     });
 
     grid.appendChild(cell);
@@ -1401,20 +1412,18 @@ function startGame() {
   previewTimer = setTimeout(hidePattern, currentPuzzle().time);
 }
 
-function fillCell(i, cell) {
-  selected.add(i);
-  cell.classList.add("selected");
-}
+function applyStroke(i, cell) {
+  if (!canDraw || i === lastStrokeIndex) return;
 
-function toggleCell(i, cell) {
-  if (!canDraw) return;
-
-  if (selected.has(i)) {
+  if (strokeMode === "erase") {
     selected.delete(i);
     cell.classList.remove("selected");
   } else {
-    fillCell(i, cell);
+    selected.add(i);
+    cell.classList.add("selected");
   }
+
+  lastStrokeIndex = i;
 }
 
 function clearDrawing() {
@@ -1980,13 +1989,15 @@ grid.addEventListener("pointermove", (event) => {
   const cell = element?.closest?.(".cell");
   if (!cell || !grid.contains(cell)) return;
 
-  fillCell(Number(cell.dataset.index), cell);
+  applyStroke(Number(cell.dataset.index), cell);
 });
 
 function stopDrawing(event) {
   if (activePointerId !== null && event.pointerId !== activePointerId) return;
   isDrawing = false;
   activePointerId = null;
+  strokeMode = null;
+  lastStrokeIndex = null;
 }
 
 document.addEventListener("pointerup", stopDrawing);
