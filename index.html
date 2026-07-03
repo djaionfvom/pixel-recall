@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#0f1220" />
+  <title>Pixel Recall</title>
+  <link rel="icon" href="icon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <main class="app">
+    <section class="hero">
+      <p class="eyebrow">Daily visual memory puzzle</p>
+      <img class="app-icon" src="icon.svg" alt="" width="54" height="54" />
+      <h1>Pixel Recall</h1>
+      <p class="subtitle">Memorize the pixel art, then redraw it from memory.</p>
+
+      <div class="mode-switch" role="group" aria-label="Game mode">
+        <button id="dailyModeBtn" class="mode-option" type="button" aria-pressed="true">
+          Daily
+        </button>
+        <button id="journeyModeBtn" class="mode-option" type="button" aria-pressed="false">
+          Journey
+        </button>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="topbar">
+        <div>
+          <p id="puzzleName" class="puzzle-name">The Cross</p>
+          <p id="levelInfo" class="muted">Daily #1 · 5×5 · 3.0s</p>
+        </div>
+        <div id="scoreBox" class="score-box" aria-label="Score">—</div>
+      </div>
+
+      <div id="grid" class="grid" aria-label="Drawing grid"></div>
+
+      <p id="message" class="message" aria-live="polite">
+        Press Start and memorize the pattern.
+      </p>
+
+      <div class="controls">
+        <button id="startBtn" type="button">Start</button>
+        <button id="clearBtn" class="secondary" type="button">Clear</button>
+        <button id="checkBtn" class="secondary" type="button">Check</button>
+      </div>
+    </section>
+
+    <section class="legend" aria-label="Result colors">
+      <span><b class="green"></b>Correct</span>
+      <span><b class="red"></b>Extra</span>
+      <span><b class="blue"></b>Missed</span>
+    </section>
+
+    <button id="shareBtn" class="share-button secondary" type="button" disabled>
+      Share result
+    </button>
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>
