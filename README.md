@@ -22,3 +22,13 @@ Open `index.html` in a browser.
 5. Select the `main` branch and root folder.
 
 Once deployed, the Share button includes the live page URL in shared results.
+
+
+## Result image sharing
+
+After a completed round, the Share button generates a PNG result card containing the score and colored result grid. On mobile browsers that support file sharing, it opens the native share sheet with the PNG attached. On supported desktop browsers it copies the PNG to the clipboard; otherwise it downloads the PNG so it can be attached manually.
+
+
+## Desktop sharing fix
+
+This version avoids opening the native file-sharing dialog on desktop browsers, where support is inconsistent. On desktop it first attempts to copy the PNG image and automatically downloads it if image clipboard access fails or times out. Mobile devices continue to use the native share sheet.

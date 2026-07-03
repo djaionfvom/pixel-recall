@@ -1433,11 +1433,24 @@ function checkAnswer() {
   const extra = [...selected].filter((i) => !target.has(i)).length;
   const accuracy = Math.max(0, Math.round((correct / (puzzle.cells.length + extra)) * 100));
 
+  const cellStates = [...document.querySelectorAll(".cell")].map((cell) => {
+    if (cell.classList.contains("correct")) return "correct";
+    if (cell.classList.contains("extra")) return "extra";
+    if (cell.classList.contains("missed")) return "missed";
+    return "empty";
+  });
+
   lastResult = {
     mode: resultMode,
     level: resultLevel,
     dailyNumber: resultDailyNumber,
-    accuracy
+    accuracy,
+    puzzleName: puzzle.name,
+    size: puzzle.size,
+    correct,
+    missed,
+    extra,
+    cellStates
   };
 
   scoreBox.textContent = `${accuracy}%`;
@@ -1497,38 +1510,252 @@ function shareText() {
   return `🧠 ${heading}\n${resultLine(lastResult.accuracy)}\n${lastResult.accuracy}% accuracy\n\nCan you beat me?${pageUrl}`;
 }
 
+function canvasToPngBlob(canvas) {
+  return new Promise((resolve, reject) => {
+    const timeoutId = setTimeout(() => {
+      reject(new Error("Image generation timed out."));
+    }, 8000);
+
+    canvas.toBlob((blob) => {
+      clearTimeout(timeoutId);
+      if (blob) {
+        resolve(blob);
+      } else {
+        reject(new Error("The browser could not create the PNG image."));
+      }
+    }, "image/png");
+  });
+}
+
+function roundedRect(ctx, x, y, width, height, radius) {
+  const r = Math.min(radius, width / 2, height / 2);
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + width, y, x + width, y + height, r);
+  ctx.arcTo(x + width, y + height, x, y + height, r);
+  ctx.arcTo(x, y + height, x, y, r);
+  ctx.arcTo(x, y, x + width, y, r);
+  ctx.closePath();
+}
+
+function fitFontSize(ctx, text, maxWidth, initialSize, minSize = 28) {
+  let size = initialSize;
+  while (size > minSize) {
+    ctx.font = `800 ${size}px Inter, system-ui, sans-serif`;
+    if (ctx.measureText(text).width <= maxWidth) break;
+    size -= 2;
+  }
+  return size;
+}
+
+async function createResultImageBlob() {
+  if (!lastResult) throw new Error("No result is available.");
+
+  const canvas = document.createElement("canvas");
+  canvas.width = 1080;
+  canvas.height = 1350;
+  const ctx = canvas.getContext("2d");
+
+  const background = ctx.createLinearGradient(0, 0, 1080, 1350);
+  background.addColorStop(0, "#23294a");
+  background.addColorStop(0.48, "#0f1220");
+  background.addColorStop(1, "#0a0d18");
+  ctx.fillStyle = background;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  roundedRect(ctx, 60, 55, 960, 1240, 42);
+  ctx.fillStyle = "rgba(24, 28, 47, 0.96)";
+  ctx.fill();
+  ctx.strokeStyle = "rgba(255,255,255,0.10)";
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  ctx.textBaseline = "alphabetic";
+  ctx.fillStyle = "#f3c969";
+  ctx.font = "700 27px Inter, system-ui, sans-serif";
+  ctx.letterSpacing = "3px";
+  ctx.fillText("PIXEL RECALL", 110, 130);
+
+  const roundHeading = lastResult.mode === "daily"
+    ? `Daily #${lastResult.dailyNumber}`
+    : `Journey · Level ${lastResult.level}`;
+
+  ctx.fillStyle = "#f7f7fb";
+  ctx.font = "800 52px Inter, system-ui, sans-serif";
+  ctx.fillText(roundHeading, 110, 208);
+
+  const nameSize = fitFontSize(ctx, lastResult.puzzleName, 570, 38, 26);
+  ctx.font = `800 ${nameSize}px Inter, system-ui, sans-serif`;
+  ctx.fillStyle = "#9aa3c7";
+  ctx.fillText(lastResult.puzzleName, 110, 264);
+
+  ctx.textAlign = "right";
+  ctx.fillStyle = "#f3c969";
+  ctx.font = "900 92px Inter, system-ui, sans-serif";
+  ctx.fillText(`${lastResult.accuracy}%`, 970, 220);
+  ctx.textAlign = "left";
+
+  const gridArea = 760;
+  const gap = lastResult.size >= 10 ? 7 : 9;
+  const cellSize = Math.floor((gridArea - gap * (lastResult.size - 1)) / lastResult.size);
+  const actualGridSize = cellSize * lastResult.size + gap * (lastResult.size - 1);
+  const gridX = Math.round((canvas.width - actualGridSize) / 2);
+  const gridY = 330;
+  const radius = Math.max(4, Math.min(12, Math.floor(cellSize * 0.2)));
+  const stateColors = {
+    empty: "#2b314f",
+    correct: "#47d18c",
+    extra: "#ff637d",
+    missed: "#5fa8ff"
+  };
+
+  lastResult.cellStates.forEach((state, index) => {
+    const row = Math.floor(index / lastResult.size);
+    const column = index % lastResult.size;
+    const x = gridX + column * (cellSize + gap);
+    const y = gridY + row * (cellSize + gap);
+
+    roundedRect(ctx, x, y, cellSize, cellSize, radius);
+    ctx.fillStyle = stateColors[state] || stateColors.empty;
+    ctx.fill();
+    ctx.strokeStyle = state === "empty" ? "#3b4267" : "rgba(255,255,255,0.16)";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  });
+
+  const gridBottom = gridY + actualGridSize;
+  const statsY = Math.min(gridBottom + 82, 1160);
+
+  ctx.fillStyle = "#f7f7fb";
+  ctx.font = "800 35px Inter, system-ui, sans-serif";
+  ctx.fillText(`Correct ${lastResult.correct}`, 110, statsY);
+  ctx.fillText(`Missed ${lastResult.missed}`, 405, statsY);
+  ctx.fillText(`Extra ${lastResult.extra}`, 700, statsY);
+
+  const legendY = statsY + 62;
+  const legend = [
+    ["#47d18c", "Correct"],
+    ["#ff637d", "Extra"],
+    ["#5fa8ff", "Missed"]
+  ];
+  let legendX = 110;
+  ctx.font = "600 25px Inter, system-ui, sans-serif";
+  legend.forEach(([color, label]) => {
+    roundedRect(ctx, legendX, legendY - 22, 24, 24, 6);
+    ctx.fillStyle = color;
+    ctx.fill();
+    ctx.fillStyle = "#9aa3c7";
+    ctx.fillText(label, legendX + 38, legendY);
+    legendX += 255;
+  });
+
+  ctx.fillStyle = "#9aa3c7";
+  ctx.font = "600 25px Inter, system-ui, sans-serif";
+  const siteAddress = window.location.protocol.startsWith("http")
+    ? window.location.href.replace(/\/$/, "")
+    : "Pixel Recall";
+  ctx.fillText(siteAddress, 110, 1250);
+
+  return canvasToPngBlob(canvas);
+}
+
+function downloadBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function isLikelyMobileDevice() {
+  if (navigator.userAgentData && typeof navigator.userAgentData.mobile === "boolean") {
+    return navigator.userAgentData.mobile;
+  }
+
+  const mobileUserAgent = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+  const touchOnlyIPad = navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1;
+  return mobileUserAgent || touchOnlyIPad;
+}
+
+function withTimeout(promise, milliseconds, label) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => {
+      setTimeout(() => reject(new Error(`${label} timed out.`)), milliseconds);
+    })
+  ]);
+}
+
 async function shareResult() {
   if (!lastResult) return;
 
-  const text = shareText();
+  const originalButtonText = "Share result";
+  shareBtn.disabled = true;
+  shareBtn.textContent = "Preparing image...";
 
   try {
-    if (navigator.share) {
-      await navigator.share({ title: "Pixel Recall", text });
+    const blob = await createResultImageBlob();
+    const roundName = lastResult.mode === "daily"
+      ? `daily-${lastResult.dailyNumber}`
+      : `journey-level-${lastResult.level}`;
+    const filename = `pixel-recall-${roundName}.png`;
+    const file = new File([blob], filename, { type: "image/png" });
+
+    // Native file sharing is dependable on phones, but can hang or be absent
+    // on desktop browsers. Desktops therefore use copy/download fallbacks.
+    if (
+      isLikelyMobileDevice() &&
+      navigator.share &&
+      navigator.canShare?.({ files: [file] })
+    ) {
+      await navigator.share({
+        title: "Pixel Recall",
+        text: shareText(),
+        files: [file]
+      });
+      shareBtn.textContent = originalButtonText;
       return;
     }
 
-    if (navigator.clipboard?.writeText) {
-      await navigator.clipboard.writeText(text);
-    } else {
-      const textArea = document.createElement("textarea");
-      textArea.value = text;
-      textArea.style.position = "fixed";
-      textArea.style.opacity = "0";
-      document.body.appendChild(textArea);
-      textArea.select();
-      document.execCommand("copy");
-      textArea.remove();
+    shareBtn.textContent = "Copying image...";
+
+    if (navigator.clipboard?.write && typeof ClipboardItem !== "undefined") {
+      try {
+        await withTimeout(
+          navigator.clipboard.write([
+            new ClipboardItem({ "image/png": blob })
+          ]),
+          3500,
+          "Clipboard copy"
+        );
+        shareBtn.textContent = "Image copied!";
+        message.textContent = "Result image copied. Paste it into a message or post.";
+        setTimeout(() => {
+          shareBtn.textContent = originalButtonText;
+        }, 2200);
+        return;
+      } catch (clipboardError) {
+        console.warn("Image clipboard unavailable; downloading instead.", clipboardError);
+      }
     }
 
-    shareBtn.textContent = "Copied!";
+    downloadBlob(blob, filename);
+    shareBtn.textContent = "Image downloaded!";
+    message.textContent = "Result image downloaded. Attach it from your Downloads folder.";
     setTimeout(() => {
-      shareBtn.textContent = "Share result";
-    }, 1600);
+      shareBtn.textContent = originalButtonText;
+    }, 2200);
   } catch (error) {
     if (error?.name !== "AbortError") {
-      message.textContent = "Sharing did not work. Please try again.";
+      console.error(error);
+      message.textContent = "The result image could not be prepared. Please try again.";
     }
+    shareBtn.textContent = originalButtonText;
+  } finally {
+    shareBtn.disabled = false;
   }
 }
 
