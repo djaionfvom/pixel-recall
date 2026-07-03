@@ -20,6 +20,6 @@ When opened locally, social buttons share the public GitHub Pages URL. When depl
 Upload `index.html`, `style.css`, `script.js`, `icon.svg`, and `README.md` to the repository root.
 
 
-## Mobile drawing fix
+## Toggle-drag drawing
 
-Touch drawing now locks each gesture into paint or erase mode. Starting a drag on an empty cell paints; starting on a selected cell erases. This prevents tiny mobile pointer movements from immediately repainting a pixel that was tapped to erase.
+Drawing now behaves the same with touch and mouse. Each cell touched during a drag toggles once: empty cells become filled and filled cells become empty. A cell is changed only once per gesture, which prevents pointer jitter from undoing the action.

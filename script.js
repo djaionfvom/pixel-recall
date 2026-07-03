@@ -1274,8 +1274,7 @@ let selected = new Set();
 let canDraw = false;
 let isDrawing = false;
 let activePointerId = null;
-let strokeMode = null;
-let lastStrokeIndex = null;
+let visitedStrokeCells = new Set();
 let previewTimer = null;
 let lastResult = null;
 let preparedShare = null;
@@ -1345,8 +1344,7 @@ function buildGrid() {
   canDraw = false;
   isDrawing = false;
   activePointerId = null;
-  strokeMode = null;
-  lastStrokeIndex = null;
+  visitedStrokeCells.clear();
   lastResult = null;
   preparedShare = null;
   sharePreparationPromise = null;
@@ -1370,11 +1368,10 @@ function buildGrid() {
       event.preventDefault();
       isDrawing = true;
       activePointerId = event.pointerId;
-      strokeMode = selected.has(i) ? "erase" : "paint";
-      lastStrokeIndex = null;
+      visitedStrokeCells.clear();
 
       cell.setPointerCapture?.(event.pointerId);
-      applyStroke(i, cell);
+      toggleStrokeCell(i, cell);
     });
 
     grid.appendChild(cell);
@@ -1412,18 +1409,18 @@ function startGame() {
   previewTimer = setTimeout(hidePattern, currentPuzzle().time);
 }
 
-function applyStroke(i, cell) {
-  if (!canDraw || i === lastStrokeIndex) return;
+function toggleStrokeCell(i, cell) {
+  if (!canDraw || visitedStrokeCells.has(i)) return;
 
-  if (strokeMode === "erase") {
+  visitedStrokeCells.add(i);
+
+  if (selected.has(i)) {
     selected.delete(i);
     cell.classList.remove("selected");
   } else {
     selected.add(i);
     cell.classList.add("selected");
   }
-
-  lastStrokeIndex = i;
 }
 
 function clearDrawing() {
@@ -1989,15 +1986,14 @@ grid.addEventListener("pointermove", (event) => {
   const cell = element?.closest?.(".cell");
   if (!cell || !grid.contains(cell)) return;
 
-  applyStroke(Number(cell.dataset.index), cell);
+  toggleStrokeCell(Number(cell.dataset.index), cell);
 });
 
 function stopDrawing(event) {
   if (activePointerId !== null && event.pointerId !== activePointerId) return;
   isDrawing = false;
   activePointerId = null;
-  strokeMode = null;
-  lastStrokeIndex = null;
+  visitedStrokeCells.clear();
 }
 
 document.addEventListener("pointerup", stopDrawing);
