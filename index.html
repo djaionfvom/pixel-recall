@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#0f1220" />
   <title>Pixel Recall</title>
   <link rel="icon" href="icon.svg" type="image/svg+xml" />
-  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="style.css?v=share-menu-v8" />
 </head>
 <body>
   <main class="app">
@@ -57,8 +57,36 @@
     <button id="shareBtn" class="share-button secondary" type="button" disabled>
       Share result
     </button>
+
+    <section id="sharePanel" class="share-panel" aria-labelledby="sharePanelTitle" hidden>
+      <div class="share-panel-header">
+        <div>
+          <p id="sharePanelTitle" class="share-panel-title">Share result</p>
+          <p id="sharePanelMessage" class="share-panel-message">
+            Share the result link, or copy and download the result image.
+          </p>
+        </div>
+        <button id="closeSharePanelBtn" class="icon-button" type="button" aria-label="Close share options">×</button>
+      </div>
+
+      <img id="resultPreview" class="result-preview" alt="Preview of the Pixel Recall result image" />
+
+      <div class="share-destinations" aria-label="Share destinations">
+        <a id="whatsAppShare" class="share-destination" target="_blank" rel="noopener noreferrer">WhatsApp</a>
+        <a id="facebookShare" class="share-destination" target="_blank" rel="noopener noreferrer">Facebook</a>
+        <a id="xShare" class="share-destination" target="_blank" rel="noopener noreferrer">X</a>
+        <a id="emailShare" class="share-destination">Email</a>
+      </div>
+
+      <div class="share-panel-actions">
+        <button id="nativeImageShareBtn" type="button" hidden>Share image</button>
+        <button id="copyLinkBtn" class="secondary" type="button">Copy link</button>
+        <button id="copyImageBtn" class="secondary" type="button">Copy image</button>
+        <button id="downloadImageBtn" class="secondary" type="button">Download image</button>
+      </div>
+    </section>
   </main>
 
-  <script src="script.js"></script>
+  <script src="script.js?v=share-menu-v8"></script>
 </body>
 </html>

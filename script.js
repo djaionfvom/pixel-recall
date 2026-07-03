@@ -1241,6 +1241,18 @@ const message = document.querySelector("#message");
 const puzzleName = document.querySelector("#puzzleName");
 const levelInfo = document.querySelector("#levelInfo");
 const scoreBox = document.querySelector("#scoreBox");
+const sharePanel = document.querySelector("#sharePanel");
+const sharePanelMessage = document.querySelector("#sharePanelMessage");
+const resultPreview = document.querySelector("#resultPreview");
+const whatsAppShare = document.querySelector("#whatsAppShare");
+const facebookShare = document.querySelector("#facebookShare");
+const xShare = document.querySelector("#xShare");
+const emailShare = document.querySelector("#emailShare");
+const nativeImageShareBtn = document.querySelector("#nativeImageShareBtn");
+const copyLinkBtn = document.querySelector("#copyLinkBtn");
+const copyImageBtn = document.querySelector("#copyImageBtn");
+const downloadImageBtn = document.querySelector("#downloadImageBtn");
+const closeSharePanelBtn = document.querySelector("#closeSharePanelBtn");
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const DAILY_EPOCH = Date.UTC(2026, 0, 1);
@@ -1264,6 +1276,9 @@ let isDrawing = false;
 let activePointerId = null;
 let previewTimer = null;
 let lastResult = null;
+let preparedShare = null;
+let previewObjectUrl = null;
+let sharePreparationPromise = null;
 
 function utcDayStart(date = new Date()) {
   return Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
@@ -1328,6 +1343,9 @@ function buildGrid() {
   canDraw = false;
   isDrawing = false;
   lastResult = null;
+  preparedShare = null;
+  sharePreparationPromise = null;
+  hideSharePanel();
   scoreBox.textContent = "—";
   puzzleName.textContent = puzzle.name;
   levelInfo.textContent = currentRoundLabel(puzzle);
@@ -1459,7 +1477,8 @@ function checkAnswer() {
   canDraw = false;
   clearBtn.disabled = true;
   checkBtn.disabled = true;
-  shareBtn.disabled = false;
+  shareBtn.disabled = true;
+  shareBtn.textContent = "Preparing share...";
   startBtn.disabled = false;
 
   if (resultMode === "daily") {
@@ -1491,23 +1510,8 @@ function checkAnswer() {
     localStorage.setItem(JOURNEY_RUN_KEY, String(level));
     localStorage.setItem("pixelRecallJourneyHighScore", String(journeyHighScore));
   }
-}
 
-function resultLine(accuracy) {
-  const filled = Math.max(0, Math.min(5, Math.round(accuracy / 20)));
-  return `${"🟨".repeat(filled)}${"⬜".repeat(5 - filled)}`;
-}
-
-function shareText() {
-  if (!lastResult) return "";
-
-  const heading = lastResult.mode === "daily"
-    ? `Pixel Recall Daily #${lastResult.dailyNumber}`
-    : `Pixel Recall Journey · Level ${lastResult.level}`;
-
-  const pageUrl = window.location.protocol.startsWith("http") ? `\n${window.location.href}` : "";
-
-  return `🧠 ${heading}\n${resultLine(lastResult.accuracy)}\n${lastResult.accuracy}% accuracy\n\nCan you beat me?${pageUrl}`;
+  prepareShareAsset();
 }
 
 function canvasToPngBlob(canvas) {
@@ -1670,93 +1674,295 @@ function downloadBlob(blob, filename) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-function isLikelyMobileDevice() {
-  if (navigator.userAgentData && typeof navigator.userAgentData.mobile === "boolean") {
-    return navigator.userAgentData.mobile;
-  }
+function withTimeout(promise, milliseconds, label) {
+  let timeoutId;
+  const timeout = new Promise((_, reject) => {
+    timeoutId = setTimeout(() => reject(new Error(`${label} timed out.`)), milliseconds);
+  });
 
-  const mobileUserAgent = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
-  const touchOnlyIPad = navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1;
-  return mobileUserAgent || touchOnlyIPad;
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timeoutId));
 }
 
-function withTimeout(promise, milliseconds, label) {
-  return Promise.race([
-    promise,
-    new Promise((_, reject) => {
-      setTimeout(() => reject(new Error(`${label} timed out.`)), milliseconds);
-    })
-  ]);
+async function copyImageToClipboard(blob) {
+  if (!navigator.clipboard?.write || typeof ClipboardItem === "undefined") {
+    return false;
+  }
+
+  try {
+    await withTimeout(
+      navigator.clipboard.write([
+        new ClipboardItem({ "image/png": blob })
+      ]),
+      4000,
+      "Clipboard copy"
+    );
+    return true;
+  } catch (error) {
+    console.warn("Image clipboard is unavailable.", error);
+    return false;
+  }
+}
+
+function filenameForResult() {
+  if (!lastResult) return "pixel-recall-result.png";
+  const roundName = lastResult.mode === "daily"
+    ? `daily-${lastResult.dailyNumber}`
+    : `journey-level-${lastResult.level}`;
+  return `pixel-recall-${roundName}.png`;
+}
+
+async function prepareShareAsset() {
+  if (!lastResult) return null;
+  if (preparedShare) return preparedShare;
+  if (sharePreparationPromise) return sharePreparationPromise;
+
+  const resultBeingPrepared = lastResult;
+  sharePreparationPromise = (async () => {
+    try {
+      const blob = await createResultImageBlob();
+      if (lastResult !== resultBeingPrepared) return null;
+
+      const filename = filenameForResult();
+      const file = new File([blob], filename, { type: "image/png" });
+      preparedShare = { blob, file, filename };
+      shareBtn.disabled = false;
+      shareBtn.textContent = "Share result";
+      return preparedShare;
+    } catch (error) {
+      console.error("Share image preparation failed.", error);
+      if (lastResult === resultBeingPrepared) {
+        shareBtn.disabled = false;
+        shareBtn.textContent = "Try image again";
+        message.textContent = "The result image was not ready. Press the button to try again.";
+      }
+      return null;
+    } finally {
+      sharePreparationPromise = null;
+    }
+  })();
+
+  return sharePreparationPromise;
+}
+
+function isProbablyMobileDevice() {
+  if (navigator.userAgentData?.mobile === true) return true;
+
+  const mobileUserAgent = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+  const touchIpad = navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1;
+  return mobileUserAgent || touchIpad;
+}
+
+function canNativeShareImage(file) {
+  if (!isProbablyMobileDevice()) return false;
+  if (window.location.protocol === "file:") return false;
+  if (!window.isSecureContext) return false;
+  if (typeof navigator.share !== "function") return false;
+  if (typeof navigator.canShare !== "function") return false;
+
+  try {
+    return navigator.canShare({ files: [file] });
+  } catch (error) {
+    console.warn("Native image sharing is unavailable.", error);
+    return false;
+  }
+}
+
+function clearPreviewObjectUrl() {
+  if (!previewObjectUrl) return;
+  URL.revokeObjectURL(previewObjectUrl);
+  previewObjectUrl = null;
+}
+
+function hideSharePanel() {
+  if (!sharePanel) return;
+  sharePanel.hidden = true;
+  clearPreviewObjectUrl();
+  resultPreview.removeAttribute("src");
+}
+
+function canonicalShareUrl() {
+  if (window.location.protocol === "http:" || window.location.protocol === "https:") {
+    const url = new URL(window.location.href);
+    url.search = "";
+    url.hash = "";
+    return url.toString();
+  }
+
+  return "https://djaionfvom.github.io/pixel-recall/";
+}
+
+function shareMessageText() {
+  if (!lastResult) return "Play Pixel Recall";
+
+  const heading = lastResult.mode === "daily"
+    ? `Pixel Recall Daily #${lastResult.dailyNumber}`
+    : `Pixel Recall Journey · Level ${lastResult.level}`;
+
+  return `${heading} — ${lastResult.accuracy}% accuracy. Can you beat me?`;
+}
+
+function configureShareLinks() {
+  const url = canonicalShareUrl();
+  const text = shareMessageText();
+  const combined = `${text}\n${url}`;
+
+  whatsAppShare.href = `https://wa.me/?text=${encodeURIComponent(combined)}`;
+  facebookShare.href = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`;
+  xShare.href = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`;
+  emailShare.href = `mailto:?subject=${encodeURIComponent("Pixel Recall result")}&body=${encodeURIComponent(combined)}`;
+}
+
+function showSharePanel(asset) {
+  clearPreviewObjectUrl();
+  previewObjectUrl = URL.createObjectURL(asset.blob);
+  resultPreview.src = previewObjectUrl;
+  configureShareLinks();
+
+  const canCopyImage = Boolean(
+    window.isSecureContext &&
+    navigator.clipboard?.write &&
+    typeof ClipboardItem !== "undefined"
+  );
+  copyImageBtn.disabled = !canCopyImage;
+  copyImageBtn.textContent = canCopyImage ? "Copy image" : "Copy unavailable";
+  copyLinkBtn.textContent = "Copy link";
+  downloadImageBtn.textContent = "Download image";
+
+  const nativeAvailable = canNativeShareImage(asset.file);
+  nativeImageShareBtn.hidden = !nativeAvailable;
+  nativeImageShareBtn.disabled = false;
+  nativeImageShareBtn.textContent = "Share image";
+
+  sharePanelMessage.textContent = nativeAvailable
+    ? "Share the screenshot through your phone, share the result link, or copy and download the image."
+    : "Share the result link, or copy and download the result image.";
+
+  sharePanel.hidden = false;
+  sharePanel.scrollIntoView({ behavior: "smooth", block: "nearest" });
 }
 
 async function shareResult() {
   if (!lastResult) return;
 
-  const originalButtonText = "Share result";
-  shareBtn.disabled = true;
-  shareBtn.textContent = "Preparing image...";
+  if (!preparedShare) {
+    shareBtn.disabled = true;
+    shareBtn.textContent = "Preparing image...";
 
-  try {
-    const blob = await createResultImageBlob();
-    const roundName = lastResult.mode === "daily"
-      ? `daily-${lastResult.dailyNumber}`
-      : `journey-level-${lastResult.level}`;
-    const filename = `pixel-recall-${roundName}.png`;
-    const file = new File([blob], filename, { type: "image/png" });
+    const asset = await withTimeout(
+      prepareShareAsset(),
+      10000,
+      "Result image preparation"
+    ).catch((error) => {
+      console.warn("Result image preparation did not finish.", error);
+      return null;
+    });
 
-    // Native file sharing is dependable on phones, but can hang or be absent
-    // on desktop browsers. Desktops therefore use copy/download fallbacks.
-    if (
-      isLikelyMobileDevice() &&
-      navigator.share &&
-      navigator.canShare?.({ files: [file] })
-    ) {
-      await navigator.share({
-        title: "Pixel Recall",
-        text: shareText(),
-        files: [file]
-      });
-      shareBtn.textContent = originalButtonText;
+    shareBtn.disabled = false;
+    shareBtn.textContent = "Share result";
+
+    if (!asset) {
+      message.textContent = "The result image could not be prepared. Press Share result to try again.";
       return;
     }
-
-    shareBtn.textContent = "Copying image...";
-
-    if (navigator.clipboard?.write && typeof ClipboardItem !== "undefined") {
-      try {
-        await withTimeout(
-          navigator.clipboard.write([
-            new ClipboardItem({ "image/png": blob })
-          ]),
-          3500,
-          "Clipboard copy"
-        );
-        shareBtn.textContent = "Image copied!";
-        message.textContent = "Result image copied. Paste it into a message or post.";
-        setTimeout(() => {
-          shareBtn.textContent = originalButtonText;
-        }, 2200);
-        return;
-      } catch (clipboardError) {
-        console.warn("Image clipboard unavailable; downloading instead.", clipboardError);
-      }
-    }
-
-    downloadBlob(blob, filename);
-    shareBtn.textContent = "Image downloaded!";
-    message.textContent = "Result image downloaded. Attach it from your Downloads folder.";
-    setTimeout(() => {
-      shareBtn.textContent = originalButtonText;
-    }, 2200);
-  } catch (error) {
-    if (error?.name !== "AbortError") {
-      console.error(error);
-      message.textContent = "The result image could not be prepared. Please try again.";
-    }
-    shareBtn.textContent = originalButtonText;
-  } finally {
-    shareBtn.disabled = false;
   }
+
+  showSharePanel(preparedShare);
+}
+
+async function nativeSharePreparedImage() {
+  if (!preparedShare || !canNativeShareImage(preparedShare.file)) return;
+
+  nativeImageShareBtn.disabled = true;
+  nativeImageShareBtn.textContent = "Opening share menu...";
+
+  try {
+    await withTimeout(
+      navigator.share({ files: [preparedShare.file] }),
+      60000,
+      "System share"
+    );
+    sharePanelMessage.textContent = "Result shared.";
+  } catch (error) {
+    if (error?.name === "AbortError") {
+      sharePanelMessage.textContent = "Sharing cancelled.";
+    } else {
+      console.warn("Native image sharing failed.", error);
+      sharePanelMessage.textContent = "The phone share menu could not share the image. Use Copy image or Download image instead.";
+    }
+  } finally {
+    nativeImageShareBtn.disabled = false;
+    nativeImageShareBtn.textContent = "Share image";
+  }
+}
+
+async function copyTextToClipboard(text) {
+  if (navigator.clipboard?.writeText) {
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch (error) {
+      console.warn("Clipboard text copy failed.", error);
+    }
+  }
+
+  try {
+    const textArea = document.createElement("textarea");
+    textArea.value = text;
+    textArea.style.position = "fixed";
+    textArea.style.opacity = "0";
+    document.body.appendChild(textArea);
+    textArea.select();
+    const copied = document.execCommand("copy");
+    textArea.remove();
+    return copied;
+  } catch (error) {
+    console.warn("Fallback text copy failed.", error);
+    return false;
+  }
+}
+
+async function copyShareLink() {
+  const copied = await copyTextToClipboard(canonicalShareUrl());
+  if (copied) {
+    copyLinkBtn.textContent = "Link copied";
+    sharePanelMessage.textContent = "Link copied. Paste it anywhere.";
+    setTimeout(() => {
+      copyLinkBtn.textContent = "Copy link";
+    }, 2200);
+  } else {
+    sharePanelMessage.textContent = "The browser blocked link copying. Select the address from the browser bar instead.";
+  }
+}
+
+async function copyPreparedImage() {
+  if (!preparedShare) return;
+
+  copyImageBtn.disabled = true;
+  copyImageBtn.textContent = "Copying...";
+  const copied = await copyImageToClipboard(preparedShare.blob);
+
+  if (copied) {
+    copyImageBtn.textContent = "Image copied";
+    sharePanelMessage.textContent = "Image copied. Paste it into Gmail, WhatsApp, Discord, or another app.";
+    setTimeout(() => {
+      copyImageBtn.textContent = "Copy image";
+      copyImageBtn.disabled = false;
+    }, 2200);
+    return;
+  }
+
+  copyImageBtn.textContent = "Copy unavailable";
+  sharePanelMessage.textContent = "This browser blocked image copying. Use Download image instead.";
+}
+
+function downloadPreparedImage() {
+  if (!preparedShare) return;
+  downloadBlob(preparedShare.blob, preparedShare.filename);
+  downloadImageBtn.textContent = "Image downloaded";
+  sharePanelMessage.textContent = "The PNG was downloaded and can be attached anywhere.";
+  setTimeout(() => {
+    downloadImageBtn.textContent = "Download image";
+  }, 2200);
 }
 
 function setMode(nextMode) {
@@ -1790,9 +1996,15 @@ startBtn.addEventListener("click", startGame);
 clearBtn.addEventListener("click", clearDrawing);
 checkBtn.addEventListener("click", checkAnswer);
 shareBtn.addEventListener("click", shareResult);
+nativeImageShareBtn.addEventListener("click", nativeSharePreparedImage);
+copyLinkBtn.addEventListener("click", copyShareLink);
+copyImageBtn.addEventListener("click", copyPreparedImage);
+downloadImageBtn.addEventListener("click", downloadPreparedImage);
+closeSharePanelBtn.addEventListener("click", hideSharePanel);
 dailyModeBtn.addEventListener("click", () => setMode("daily"));
 journeyModeBtn.addEventListener("click", () => setMode("journey"));
 window.addEventListener("resize", () => sizeGrid(currentPuzzle()));
 
+console.info("Pixel Recall build: custom-link-share-menu-v8");
 updateModeButtons();
 buildGrid();
