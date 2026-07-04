@@ -2211,7 +2211,7 @@ function canonicalShareUrl() {
     return url.toString();
   }
 
-  return "https://djaionfvom.github.io/pixel-recall/";
+  return "https://pixelrecall.net/";
 }
 
 function shareMessageText() {
