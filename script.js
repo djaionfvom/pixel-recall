@@ -1280,6 +1280,7 @@ let lastResult = null;
 let preparedShare = null;
 let previewObjectUrl = null;
 let sharePreparationPromise = null;
+let strokeMode = null; // "paint" or "erase"
 
 function utcDayStart(date = new Date()) {
   return Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
@@ -1370,8 +1371,10 @@ function buildGrid() {
       activePointerId = event.pointerId;
       visitedStrokeCells.clear();
 
+      strokeMode = selected.has(i) ? "erase" : "paint";
+      
       cell.setPointerCapture?.(event.pointerId);
-      toggleStrokeCell(i, cell);
+      applyStrokeCell(i, cell);
     });
 
     grid.appendChild(cell);
@@ -1409,17 +1412,21 @@ function startGame() {
   previewTimer = setTimeout(hidePattern, currentPuzzle().time);
 }
 
-function toggleStrokeCell(i, cell) {
+function applyStrokeCell(i, cell) {
   if (!canDraw || visitedStrokeCells.has(i)) return;
 
   visitedStrokeCells.add(i);
 
-  if (selected.has(i)) {
-    selected.delete(i);
-    cell.classList.remove("selected");
-  } else {
-    selected.add(i);
-    cell.classList.add("selected");
+  if (strokeMode === "paint") {
+    if (!selected.has(i)) {
+      selected.add(i);
+      cell.classList.add("selected");
+    }
+  } else if (strokeMode === "erase") {
+    if (selected.has(i)) {
+      selected.delete(i);
+      cell.classList.remove("selected");
+    }
   }
 }
 
@@ -1986,14 +1993,16 @@ grid.addEventListener("pointermove", (event) => {
   const cell = element?.closest?.(".cell");
   if (!cell || !grid.contains(cell)) return;
 
-  toggleStrokeCell(Number(cell.dataset.index), cell);
+  applyStrokeCell(Number(cell.dataset.index), cell);
 });
 
 function stopDrawing(event) {
   if (activePointerId !== null && event.pointerId !== activePointerId) return;
+
   isDrawing = false;
   activePointerId = null;
   visitedStrokeCells.clear();
+  strokeMode = null;
 }
 
 document.addEventListener("pointerup", stopDrawing);
