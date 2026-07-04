@@ -51,4 +51,4 @@ The interface-size control is pinned to the top-right column of the puzzle card,
 
 ## Version 6 zoom placement
 
-The interface-size control now sits outside the game card in a fixed position at the top-left of the viewport, slightly above the “Daily visual memory puzzle” eyebrow. The card header contains only the round label/object name and score.
+The interface-size control now sits outside the game card in a fixed position at the top-left of the viewport, slightly above the “Daily visual memory puzzle” eyebrow. The card header contains only the round label/object name and score...
