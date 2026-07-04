@@ -101,20 +101,28 @@ h1 {
 
 .floating-view-scale {
   position: fixed;
-  top: 14px;
-  left: 14px;
+  top: 16px;
+  right: 16px;
   z-index: 20;
+
+  opacity: .7;
+  transition: opacity .2s;
+}
+
+.floating-view-scale:hover {
+  opacity: 1;
 }
 
 .view-scale {
-  display: grid;
-  grid-template-columns: 28px auto 28px;
+  display: flex;
   align-items: center;
-  gap: 1px;
-  padding: 2px;
-  border: 1px solid rgba(255, 255, 255, .08);
+  gap: 2px;
+
+  padding: 2px 6px;
   border-radius: 999px;
-  background: rgba(14, 17, 31, .66);
+
+  background: transparent;
+  border: none;
 }
 
 .view-scale button {
@@ -134,15 +142,14 @@ h1 {
 }
 
 .scale-button {
-  width: 28px;
-  font-size: 17px;
-  line-height: 1;
+  width: 24px;
+  font-size: 15px;
 }
 
 .scale-value {
-  width: 48px;
+  width: 40px;
   font-size: 11px;
-  font-variant-numeric: tabular-nums;
+  text-align: center;
 }
 
 @supports not (zoom: 1) {
@@ -300,12 +307,12 @@ button:disabled {
 @media (max-width: 420px) {
   .floating-view-scale {
     top: 10px;
-    left: 10px;
+    right: 10px;
   }
 
   .topbar { gap: 10px; }
   .level-info { font-size: 12px; }
-  .app { padding: 58px 0 20px; }
+  .app { padding: 28px 0 20px; }
   .brand-lockup { gap: 10px; }
   .app-icon { width: 46px; height: 46px; }
   h1 { font-size: clamp(36px, 10.5vw, 42px); }
