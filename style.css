@@ -9,6 +9,7 @@
   --correct: #47d18c;
   --extra: #ff637d;
   --missed: #5fa8ff;
+  --ui-scale: 1;
 }
 
 * { box-sizing: border-box; }
@@ -25,47 +26,60 @@ body {
 
 .app {
   width: min(94vw, 520px);
-  padding: 32px 0;
+  padding: 28px 0;
+  zoom: var(--ui-scale);
 }
 
 .hero {
   text-align: center;
-  margin-bottom: 20px;
+  margin-bottom: 18px;
 }
 
 .eyebrow {
   color: var(--accent);
   text-transform: uppercase;
-  letter-spacing: .12em;
-  font-size: 12px;
-  margin: 0;
+  letter-spacing: .14em;
+  font-size: 11px;
+  font-weight: 800;
+  margin: 0 0 9px;
 }
 
+.brand-lockup {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
 
 .app-icon {
   display: block;
-  width: 54px;
-  height: 54px;
-  margin: 12px auto 2px;
+  width: 50px;
+  height: 50px;
+  flex: 0 0 auto;
   filter: drop-shadow(0 8px 18px rgba(243, 201, 105, .16));
 }
 
 h1 {
-  font-size: clamp(40px, 12vw, 46px);
-  margin: 8px 0 4px;
+  font-size: clamp(38px, 10vw, 46px);
+  line-height: 1;
+  letter-spacing: -.035em;
+  margin: 0;
 }
 
 .subtitle {
+  max-width: 390px;
   color: var(--muted);
-  margin: 0;
+  line-height: 1.45;
+  margin: 9px auto 0;
 }
+
 
 .mode-switch {
   width: fit-content;
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 4px;
-  margin: 18px auto 0;
+  margin: 17px auto 0;
   padding: 4px;
   border: 1px solid rgba(255, 255, 255, .08);
   border-radius: 999px;
@@ -85,6 +99,60 @@ h1 {
   box-shadow: 0 6px 18px rgba(243, 201, 105, .18);
 }
 
+.floating-view-scale {
+  position: fixed;
+  top: 14px;
+  left: 14px;
+  z-index: 20;
+}
+
+.view-scale {
+  display: grid;
+  grid-template-columns: 28px auto 28px;
+  align-items: center;
+  gap: 1px;
+  padding: 2px;
+  border: 1px solid rgba(255, 255, 255, .08);
+  border-radius: 999px;
+  background: rgba(14, 17, 31, .66);
+}
+
+.view-scale button {
+  min-width: 0;
+  height: 28px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  background: transparent;
+  color: var(--muted);
+  box-shadow: none;
+}
+
+.view-scale button:hover:not(:disabled) {
+  transform: none;
+  background: rgba(255, 255, 255, .06);
+}
+
+.scale-button {
+  width: 28px;
+  font-size: 17px;
+  line-height: 1;
+}
+
+.scale-value {
+  width: 48px;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+@supports not (zoom: 1) {
+  .app {
+    width: min(calc(94vw / var(--ui-scale)), calc(520px / var(--ui-scale)));
+    transform: scale(var(--ui-scale));
+    transform-origin: center top;
+  }
+}
+
 .card {
   background: rgba(24, 28, 47, .92);
   border: 1px solid rgba(255,255,255,.08);
@@ -94,24 +162,37 @@ h1 {
 }
 
 .topbar {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
   gap: 16px;
-  margin-bottom: 18px;
+  margin-bottom: 14px;
 }
+
+.puzzle-heading {
+  min-width: 0;
+  display: grid;
+  align-content: start;
+  gap: 4px;
+}
+
 
 .puzzle-name {
   font-size: 20px;
   font-weight: 800;
-  margin: 0 0 4px;
+  margin: 0;
 }
 
 .muted {
   color: var(--muted);
   margin: 0;
-  white-space: pre-line;
-  line-height: 1.45;
+  line-height: 1.35;
+}
+
+.level-info {
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
 }
 
 .score-box {
@@ -125,7 +206,8 @@ h1 {
   display: grid;
   gap: 7px;
   justify-content: center;
-  touch-action: none;
+  /* Keep one-finger drawing while allowing two-finger browser zoom. */
+  touch-action: pinch-zoom;
   margin: 20px auto;
   user-select: none;
 }
@@ -216,9 +298,20 @@ button:disabled {
 }
 
 @media (max-width: 420px) {
-  .app { padding: 22px 0; }
+  .floating-view-scale {
+    top: 10px;
+    left: 10px;
+  }
+
+  .topbar { gap: 10px; }
+  .level-info { font-size: 12px; }
+  .app { padding: 58px 0 20px; }
+  .brand-lockup { gap: 10px; }
+  .app-icon { width: 46px; height: 46px; }
+  h1 { font-size: clamp(36px, 10.5vw, 42px); }
+  .subtitle { padding: 0 12px; }
   .card { padding: 18px 14px; }
-  .mode-option { min-width: 96px; }
+  .mode-option { min-width: 92px; }
   .legend { gap: 12px; }
 }
 

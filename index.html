@@ -2,18 +2,30 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=0.5, maximum-scale=5.0, user-scalable=yes" />
   <meta name="theme-color" content="#0f1220" />
   <title>Pixel Recall</title>
   <link rel="icon" href="icon.svg" type="image/svg+xml" />
-  <link rel="stylesheet" href="style.css?v=share-menu-v8" />
+  <link rel="stylesheet" href="style.css?v=daily365-v6" />
 </head>
 <body>
+  <div class="floating-view-scale">
+    <div class="view-scale" role="group" aria-label="Interface size">
+      <button id="scaleDownBtn" class="scale-button" type="button" aria-label="Make everything smaller">−</button>
+      <button id="scaleResetBtn" class="scale-value" type="button" aria-label="Reset interface size">100%</button>
+      <button id="scaleUpBtn" class="scale-button" type="button" aria-label="Make everything larger">+</button>
+    </div>
+  </div>
+
   <main class="app">
     <section class="hero">
       <p class="eyebrow">Daily visual memory puzzle</p>
-      <img class="app-icon" src="icon.svg" alt="" width="54" height="54" />
-      <h1>Pixel Recall</h1>
+
+      <div class="brand-lockup">
+        <img class="app-icon" src="icon.svg" alt="" width="50" height="50" />
+        <h1>Pixel Recall</h1>
+      </div>
+
       <p class="subtitle">Memorize the pixel art, then redraw it from memory.</p>
 
       <div class="mode-switch" role="group" aria-label="Game mode">
@@ -28,10 +40,11 @@
 
     <section class="card">
       <div class="topbar">
-        <div>
-          <p id="puzzleName" class="puzzle-name">The Cross</p>
-          <p id="levelInfo" class="muted">Daily #1 · 5×5 · 3.0s</p>
+        <div class="puzzle-heading">
+          <p id="levelInfo" class="level-info muted">Daily #185</p>
+          <p id="puzzleName" class="puzzle-name" hidden></p>
         </div>
+
         <div id="scoreBox" class="score-box" aria-label="Score">—</div>
       </div>
 
@@ -87,6 +100,6 @@
     </section>
   </main>
 
-  <script src="script.js?v=share-menu-v8"></script>
+  <script src="script.js?v=daily365-v6"></script>
 </body>
 </html>
