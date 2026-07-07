@@ -1,4 +1,4 @@
-# Pixel Recall v15 — Streamlined result sharing
+# Pixel Recall v16 — Simplified result sharing
 
 This build uses different sharing entry points for result images and custom challenge links, based on what browsers handle most reliably.
 
@@ -9,7 +9,6 @@ Daily, Journey, and completed friend-challenge results now always open the Pixel
 The popup includes:
 
 - Result screenshot preview
-- **Share screenshot** through the native device menu when PNG file sharing is supported
 - Copy image when the browser allows image clipboard access
 - Download image
 - WhatsApp, Facebook, X, and email links for result text and the relevant game/challenge link
@@ -42,8 +41,12 @@ Cancelling the native menu leaves the pattern intact so the creator can press **
 
 Upload the contents of this folder to the repository root. Keep `index.html`, `style.css`, `script.js`, `icon.svg`, `og-image.png`, `CNAME`, `robots.txt`, and `sitemap.xml` at the root level.
 
-Native Web Share features require HTTPS and vary by operating system and browser. Test the screenshot action on at least one iPhone/Android device and the fallback options on a laptop after deployment.
+Native link sharing for custom-pattern creation requires HTTPS and varies by operating system and browser. Test custom challenge sharing and the result popup after deployment.
 
 ## Version 15 change
 
 The result-share popup no longer includes **Copy text + link** or **Copy link**. Custom challenge creation still keeps its dedicated challenge-link controls.
+
+## Version 16 change
+
+The result-share popup no longer includes the **Share screenshot** button. No replacement button was added.

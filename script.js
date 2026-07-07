@@ -1621,7 +1621,6 @@ const whatsAppShare = document.querySelector("#whatsAppShare");
 const facebookShare = document.querySelector("#facebookShare");
 const xShare = document.querySelector("#xShare");
 const emailShare = document.querySelector("#emailShare");
-const nativeImageShareBtn = document.querySelector("#nativeImageShareBtn");
 const copyImageBtn = document.querySelector("#copyImageBtn");
 const downloadImageBtn = document.querySelector("#downloadImageBtn");
 const closeSharePanelBtn = document.querySelector("#closeSharePanelBtn");
@@ -2437,32 +2436,6 @@ function resultShareTextWithLink() {
 ${canonicalShareUrl()}`;
 }
 
-function resultNativeShareData(file) {
-  const url = canonicalShareUrl();
-
-  return {
-    title: resultShareTitle(),
-    text: resultShareTextWithLink(),
-    url,
-    files: [file]
-  };
-}
-
-function canNativeShareResult(file) {
-  if (window.location.protocol === "file:") return false;
-  if (!window.isSecureContext) return false;
-  if (typeof navigator.share !== "function") return false;
-  if (typeof navigator.canShare !== "function") return false;
-
-  try {
-    // File support is mandatory: result sharing must always include the screenshot.
-    return navigator.canShare({ files: [file] });
-  } catch (error) {
-    console.warn("Native result sharing is unavailable.", error);
-    return false;
-  }
-}
-
 function clearPreviewObjectUrl() {
   if (!previewObjectUrl) return;
   URL.revokeObjectURL(previewObjectUrl);
@@ -2528,14 +2501,7 @@ function showSharePanel(asset) {
   copyImageBtn.textContent = canCopyImage ? "Copy image" : "Copy unavailable";
   downloadImageBtn.textContent = "Download image";
 
-  const nativeAvailable = canNativeShareResult(asset.file);
-  nativeImageShareBtn.hidden = !nativeAvailable;
-  nativeImageShareBtn.disabled = false;
-  nativeImageShareBtn.textContent = "Share screenshot";
-
-  sharePanelMessage.textContent = nativeAvailable
-    ? "Share the screenshot through your device, or copy and download it below. Social buttons share the result text and link only."
-    : "This browser cannot attach the screenshot to its share menu. Copy or download the image, then attach it manually. Social buttons share text and link only.";
+  sharePanelMessage.textContent = "Copy or download the screenshot, then attach it manually. Social buttons share the result text and link only.";
 
   shareModalReturnFocus = document.activeElement instanceof HTMLElement
     ? document.activeElement
@@ -2545,18 +2511,6 @@ function showSharePanel(asset) {
   syncModalBodyLock();
   sharePanel.scrollTop = 0;
   requestAnimationFrame(() => closeSharePanelBtn.focus());
-}
-
-async function openNativeResultShare() {
-  if (!preparedShare || !canNativeShareResult(preparedShare.file)) {
-    throw new Error("Native screenshot sharing is unavailable.");
-  }
-
-  await withTimeout(
-    navigator.share(resultNativeShareData(preparedShare.file)),
-    60000,
-    "System share"
-  );
 }
 
 async function shareResult() {
@@ -2585,41 +2539,11 @@ async function shareResult() {
   }
 
   // Always open Pixel Recall's predictable result popup first.
-  // Native file sharing remains available as an explicit screenshot action.
   showSharePanel(preparedShare);
   trackEvent("result_share_options_opened", {
     game_mode: lastResult.mode,
-    native_screenshot_available: canNativeShareResult(preparedShare.file) ? 1 : 0,
     included_challenge_link: lastResult.mode === "custom" ? 1 : 0
   });
-}
-
-async function nativeSharePreparedImage() {
-  if (!preparedShare || !canNativeShareResult(preparedShare.file)) return;
-
-  nativeImageShareBtn.disabled = true;
-  nativeImageShareBtn.textContent = "Opening share menu...";
-
-  try {
-    await openNativeResultShare();
-    sharePanelMessage.textContent = "Result shared with its screenshot.";
-    trackEvent("result_shared", {
-      game_mode: lastResult.mode,
-      share_method: "native_from_options",
-      included_screenshot: 1,
-      included_challenge_link: lastResult.mode === "custom" ? 1 : 0
-    });
-  } catch (error) {
-    if (error?.name === "AbortError") {
-      sharePanelMessage.textContent = "Sharing cancelled.";
-    } else {
-      console.warn("Native result sharing failed.", error);
-      sharePanelMessage.textContent = "The share menu could not attach the screenshot. Use Copy image or Download image instead.";
-    }
-  } finally {
-    nativeImageShareBtn.disabled = false;
-    nativeImageShareBtn.textContent = "Share screenshot";
-  }
 }
 
 async function copyTextToClipboard(text) {
@@ -2854,7 +2778,6 @@ clearBtn.addEventListener("click", clearDrawing);
 checkBtn.addEventListener("click", checkAnswer);
 shareBtn.addEventListener("click", shareResult);
 backToNormalBtn.addEventListener("click", returnToNormalPixelRecall);
-nativeImageShareBtn.addEventListener("click", nativeSharePreparedImage);
 copyImageBtn.addEventListener("click", copyPreparedImage);
 downloadImageBtn.addEventListener("click", downloadPreparedImage);
 closeSharePanelBtn.addEventListener("click", hideSharePanel);
