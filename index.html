@@ -5,11 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=0.5, maximum-scale=5.0, user-scalable=yes" />
   <meta name="theme-color" content="#0f1220" />
   <title>Pixel Recall – Daily Visual Memory Game</title>
-  <meta name="description" content="Memorize pixel art for a few seconds, then redraw it from memory. Play a free daily puzzle or continue through Journey mode." />
+  <meta name="description" content="Memorize pixel art for a few seconds, redraw it from memory, or create a custom pattern challenge for a friend." />
   <link rel="canonical" href="https://pixelrecall.net/" />
 
   <meta property="og:title" content="Pixel Recall – Daily Visual Memory Game" />
-  <meta property="og:description" content="Memorize the pixel art, then redraw it from memory." />
+  <meta property="og:description" content="Memorize pixel art, redraw it from memory, or challenge a friend with your own pattern." />
   <meta property="og:url" content="https://pixelrecall.net/" />
   <meta property="og:type" content="website" />
   <meta property="og:site_name" content="Pixel Recall" />
@@ -23,7 +23,7 @@
   <meta name="twitter:image" content="https://pixelrecall.net/og-image.png" />
 
   <link rel="icon" href="icon.svg" type="image/svg+xml" />
-  <link rel="stylesheet" href="style.css?v=v9-share-popup" />
+  <link rel="stylesheet" href="style.css?v=v11-custom-grid-size" />
 
   <!-- Google tag (gtag.js) -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-20214X136N"></script>
@@ -63,6 +63,9 @@
         <button id="journeyModeBtn" class="mode-option" type="button" aria-pressed="false">
           Journey
         </button>
+        <button id="customModeBtn" class="mode-option" type="button" aria-pressed="false">
+          Custom
+        </button>
       </div>
     </section>
 
@@ -74,6 +77,20 @@
         </div>
 
         <div id="scoreBox" class="score-box" aria-label="Score">—</div>
+      </div>
+
+      <div id="customSizeControl" class="custom-size-control" hidden>
+        <label for="customSizeSelect">Grid size</label>
+        <select id="customSizeSelect" aria-label="Custom pattern grid size">
+          <option value="5">5×5</option>
+          <option value="6">6×6</option>
+          <option value="7">7×7</option>
+          <option value="8" selected>8×8</option>
+          <option value="9">9×9</option>
+          <option value="10">10×10</option>
+          <option value="11">11×11</option>
+          <option value="12">12×12</option>
+        </select>
       </div>
 
       <div id="grid" class="grid" aria-label="Drawing grid"></div>
@@ -139,6 +156,39 @@
     </section>
   </div>
 
-  <script src="script.js?v=v9-share-popup"></script>
+
+
+  <div id="challengeModal" class="share-modal" hidden>
+    <section
+      id="challengePanel"
+      class="share-panel challenge-panel"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="challengePanelTitle"
+      aria-describedby="challengePanelMessage"
+      tabindex="-1"
+    >
+      <div class="share-panel-header">
+        <div>
+          <p id="challengePanelTitle" class="share-panel-title">Custom challenge ready</p>
+          <p id="challengePanelMessage" class="share-panel-message">
+            Send this link to a friend. The pattern is stored inside the link, so no account or backend is needed.
+          </p>
+        </div>
+        <button id="closeChallengePanelBtn" class="icon-button" type="button" aria-label="Close custom challenge">×</button>
+      </div>
+
+      <label class="challenge-link-label" for="challengeLinkInput">Challenge link</label>
+      <input id="challengeLinkInput" class="challenge-link-input" type="text" readonly />
+
+      <div class="challenge-panel-actions">
+        <button id="copyChallengeLinkBtn" type="button">Copy challenge link</button>
+        <button id="shareChallengeLinkBtn" class="secondary" type="button">Share challenge</button>
+        <a id="openChallengeLink" class="button-link secondary" target="_blank" rel="noopener noreferrer">Open challenge</a>
+      </div>
+    </section>
+  </div>
+
+  <script src="script.js?v=v11-custom-grid-size"></script>
 </body>
 </html>
