@@ -313,6 +313,15 @@ button:disabled {
   cursor: not-allowed;
 }
 
+.back-to-normal-button {
+  display: block;
+  margin: 14px auto 0;
+}
+
+.back-to-normal-button[hidden] {
+  display: none;
+}
+
 .legend {
   display: flex;
   justify-content: center;

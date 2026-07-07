@@ -23,7 +23,7 @@
   <meta name="twitter:image" content="https://pixelrecall.net/og-image.png" />
 
   <link rel="icon" href="icon.svg" type="image/svg+xml" />
-  <link rel="stylesheet" href="style.css?v=v11-custom-grid-size" />
+  <link rel="stylesheet" href="style.css?v=v13-challenge-exit" />
 
   <!-- Google tag (gtag.js) -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-20214X136N"></script>
@@ -104,6 +104,10 @@
         <button id="clearBtn" class="secondary" type="button">Clear</button>
         <button id="checkBtn" class="secondary" type="button">Check</button>
       </div>
+
+      <button id="backToNormalBtn" class="back-to-normal-button secondary" type="button" hidden>
+        Back to normal Pixel Recall
+      </button>
     </section>
 
     <section class="legend" aria-label="Result colors">
@@ -132,7 +136,7 @@
         <div>
           <p id="sharePanelTitle" class="share-panel-title">Share result</p>
           <p id="sharePanelMessage" class="share-panel-message">
-            Share the result link, or copy and download the result image.
+            Share the result with its screenshot, or copy and download the image.
           </p>
         </div>
         <button id="closeSharePanelBtn" class="icon-button" type="button" aria-label="Close share options">×</button>
@@ -148,7 +152,7 @@
       </div>
 
       <div class="share-panel-actions">
-        <button id="nativeImageShareBtn" type="button" hidden>Share image</button>
+        <button id="nativeImageShareBtn" type="button" hidden>Share result</button>
         <button id="copyLinkBtn" class="secondary" type="button">Copy link</button>
         <button id="copyImageBtn" class="secondary" type="button">Copy image</button>
         <button id="downloadImageBtn" class="secondary" type="button">Download image</button>
@@ -189,6 +193,6 @@
     </section>
   </div>
 
-  <script src="script.js?v=v11-custom-grid-size"></script>
+  <script src="script.js?v=v13-challenge-exit"></script>
 </body>
 </html>

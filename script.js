@@ -1603,6 +1603,7 @@ const startBtn = document.querySelector("#startBtn");
 const clearBtn = document.querySelector("#clearBtn");
 const checkBtn = document.querySelector("#checkBtn");
 const shareBtn = document.querySelector("#shareBtn");
+const backToNormalBtn = document.querySelector("#backToNormalBtn");
 const dailyModeBtn = document.querySelector("#dailyModeBtn");
 const journeyModeBtn = document.querySelector("#journeyModeBtn");
 const customModeBtn = document.querySelector("#customModeBtn");
@@ -1887,6 +1888,7 @@ function buildGrid() {
   levelInfo.textContent = currentRoundLabel(puzzle);
   customSizeControl.hidden = !isCustomBuilder();
   customSizeSelect.value = String(customBuilderSize);
+  backToNormalBtn.hidden = !(mode === "custom" && customChallengePuzzle && !customBuilderActive);
   grid.innerHTML = "";
   sizeGrid(puzzle);
 
@@ -2388,17 +2390,38 @@ function isProbablyMobileDevice() {
   return mobileUserAgent || touchIpad;
 }
 
-function canNativeShareImage(file) {
-  if (!isProbablyMobileDevice()) return false;
+function resultShareTitle() {
+  if (!lastResult) return "Pixel Recall result";
+  if (lastResult.mode === "daily") return `Pixel Recall Daily #${lastResult.dailyNumber}`;
+  if (lastResult.mode === "custom") return "My Pixel Recall challenge result";
+  return `Pixel Recall Journey · Level ${lastResult.level}`;
+}
+
+function resultNativeShareData(file) {
+  const url = canonicalShareUrl();
+  const text = `${shareMessageText()}
+
+${url}`;
+
+  return {
+    title: resultShareTitle(),
+    text,
+    url,
+    files: [file]
+  };
+}
+
+function canNativeShareResult(file) {
   if (window.location.protocol === "file:") return false;
   if (!window.isSecureContext) return false;
   if (typeof navigator.share !== "function") return false;
   if (typeof navigator.canShare !== "function") return false;
 
   try {
+    // File support is mandatory: result sharing must always include the screenshot.
     return navigator.canShare({ files: [file] });
   } catch (error) {
-    console.warn("Native image sharing is unavailable.", error);
+    console.warn("Native result sharing is unavailable.", error);
     return false;
   }
 }
@@ -2436,10 +2459,10 @@ function shareMessageText() {
   const heading = lastResult.mode === "daily"
     ? `Pixel Recall Daily #${lastResult.dailyNumber}`
     : lastResult.mode === "custom"
-      ? "Pixel Recall Friend Challenge"
+      ? `${lastResult.size}×${lastResult.size} Pixel Recall Friend Challenge`
       : `Pixel Recall Journey · Level ${lastResult.level}`;
 
-  return `${heading} — ${lastResult.accuracy}% accuracy. Can you beat me?`;
+  return `I scored ${lastResult.accuracy}% on ${heading}. Can you beat me?`;
 }
 
 function configureShareLinks() {
@@ -2469,14 +2492,14 @@ function showSharePanel(asset) {
   copyLinkBtn.textContent = "Copy link";
   downloadImageBtn.textContent = "Download image";
 
-  const nativeAvailable = canNativeShareImage(asset.file);
+  const nativeAvailable = canNativeShareResult(asset.file);
   nativeImageShareBtn.hidden = !nativeAvailable;
   nativeImageShareBtn.disabled = false;
-  nativeImageShareBtn.textContent = "Share image";
+  nativeImageShareBtn.textContent = "Share result";
 
   sharePanelMessage.textContent = nativeAvailable
-    ? "Share the screenshot through your phone, share the result link, or copy and download the image."
-    : "Share the result link, or copy and download the result image.";
+    ? "Share the result with its screenshot, or use the copy and download options below."
+    : "This browser cannot attach the screenshot to its share menu. Copy or download the result image instead.";
 
   shareModalReturnFocus = document.activeElement instanceof HTMLElement
     ? document.activeElement
@@ -2486,6 +2509,18 @@ function showSharePanel(asset) {
   syncModalBodyLock();
   sharePanel.scrollTop = 0;
   requestAnimationFrame(() => closeSharePanelBtn.focus());
+}
+
+async function openNativeResultShare() {
+  if (!preparedShare || !canNativeShareResult(preparedShare.file)) {
+    throw new Error("Native screenshot sharing is unavailable.");
+  }
+
+  await withTimeout(
+    navigator.share(resultNativeShareData(preparedShare.file)),
+    60000,
+    "System share"
+  );
 }
 
 async function shareResult() {
@@ -2513,32 +2548,59 @@ async function shareResult() {
     }
   }
 
-  showSharePanel(preparedShare);
+  if (!canNativeShareResult(preparedShare.file)) {
+    showSharePanel(preparedShare);
+    return;
+  }
+
+  shareBtn.disabled = true;
+  shareBtn.textContent = "Opening share menu...";
+
+  try {
+    await openNativeResultShare();
+    trackEvent("result_shared", {
+      game_mode: lastResult.mode,
+      share_method: "native",
+      included_screenshot: 1,
+      included_challenge_link: lastResult.mode === "custom" ? 1 : 0
+    });
+  } catch (error) {
+    if (error?.name !== "AbortError") {
+      console.warn("Native result sharing failed.", error);
+      showSharePanel(preparedShare);
+      sharePanelMessage.textContent = "The share menu could not attach the screenshot. Use Copy image or Download image instead.";
+    }
+  } finally {
+    shareBtn.disabled = false;
+    shareBtn.textContent = "Share result";
+  }
 }
 
 async function nativeSharePreparedImage() {
-  if (!preparedShare || !canNativeShareImage(preparedShare.file)) return;
+  if (!preparedShare || !canNativeShareResult(preparedShare.file)) return;
 
   nativeImageShareBtn.disabled = true;
   nativeImageShareBtn.textContent = "Opening share menu...";
 
   try {
-    await withTimeout(
-      navigator.share({ files: [preparedShare.file] }),
-      60000,
-      "System share"
-    );
-    sharePanelMessage.textContent = "Result shared.";
+    await openNativeResultShare();
+    sharePanelMessage.textContent = "Result shared with its screenshot.";
+    trackEvent("result_shared", {
+      game_mode: lastResult.mode,
+      share_method: "native_from_options",
+      included_screenshot: 1,
+      included_challenge_link: lastResult.mode === "custom" ? 1 : 0
+    });
   } catch (error) {
     if (error?.name === "AbortError") {
       sharePanelMessage.textContent = "Sharing cancelled.";
     } else {
-      console.warn("Native image sharing failed.", error);
-      sharePanelMessage.textContent = "The phone share menu could not share the image. Use Copy image or Download image instead.";
+      console.warn("Native result sharing failed.", error);
+      sharePanelMessage.textContent = "The share menu could not attach the screenshot. Use Copy image or Download image instead.";
     }
   } finally {
     nativeImageShareBtn.disabled = false;
-    nativeImageShareBtn.textContent = "Share image";
+    nativeImageShareBtn.textContent = "Share result";
   }
 }
 
@@ -2674,12 +2736,24 @@ async function shareCustomChallengeLink() {
   shareChallengeLinkBtn.disabled = true;
   shareChallengeLinkBtn.textContent = "Opening share menu...";
   try {
+    const size = customBuilderSize;
+    const challengeText = `I made you a ${size}×${size} Pixel Recall memory challenge. Memorize the pattern, redraw it, and send me your score!
+
+${currentChallengeUrl}`;
+
     await navigator.share({
-      title: "Pixel Recall friend challenge",
-      text: "I made a Pixel Recall pattern for you. Can you redraw it from memory?",
+      title: "A Pixel Recall challenge for you",
+      text: challengeText,
+      // The URL is also included in the visible text so it is not lost by apps
+      // that handle Web Share fields differently.
       url: currentChallengeUrl
     });
-    challengePanelMessage.textContent = "Challenge shared.";
+    challengePanelMessage.textContent = "Challenge shared with its link.";
+    trackEvent("custom_challenge_shared", {
+      custom_grid_size: size,
+      share_method: "native",
+      included_challenge_link: 1
+    });
   } catch (error) {
     if (error?.name !== "AbortError") {
       console.warn("Challenge sharing failed.", error);
@@ -2701,8 +2775,39 @@ function activeModalState() {
   return null;
 }
 
+function clearAcceptedChallenge() {
+  if (!customChallengePuzzle) return;
+
+  customChallengeCode = null;
+  customChallengeSize = null;
+  customChallengePuzzle = null;
+  customBuilderActive = true;
+  currentChallengeUrl = "";
+
+  if (window.location.protocol === "http:" || window.location.protocol === "https:") {
+    window.history.replaceState({}, "", publicGameUrl());
+  }
+}
+
+function returnToNormalPixelRecall() {
+  trackEvent("custom_challenge_exit", {
+    destination: "daily",
+    exit_method: "back_button"
+  });
+
+  window.location.assign(publicGameUrl().toString());
+}
+
 function setMode(nextMode) {
   if (nextMode === mode) return;
+
+  if (customChallengePuzzle && nextMode !== "custom") {
+    trackEvent("custom_challenge_exit", {
+      destination: nextMode,
+      exit_method: "mode_switch"
+    });
+    clearAcceptedChallenge();
+  }
 
   mode = nextMode;
   if (mode === "custom") {
@@ -2740,6 +2845,7 @@ startBtn.addEventListener("click", startGame);
 clearBtn.addEventListener("click", clearDrawing);
 checkBtn.addEventListener("click", checkAnswer);
 shareBtn.addEventListener("click", shareResult);
+backToNormalBtn.addEventListener("click", returnToNormalPixelRecall);
 nativeImageShareBtn.addEventListener("click", nativeSharePreparedImage);
 copyLinkBtn.addEventListener("click", copyShareLink);
 copyImageBtn.addEventListener("click", copyPreparedImage);
@@ -2805,7 +2911,7 @@ scaleResetBtn.addEventListener("click", () => applyUiScale(1));
 scaleUpBtn.addEventListener("click", () => applyUiScale(uiScale + UI_SCALE_STEP));
 window.addEventListener("resize", () => sizeGrid(currentPuzzle()));
 
-console.info("Pixel Recall build: v11-custom-grid-size");
+console.info("Pixel Recall build: v13-challenge-exit");
 applyUiScale(uiScale, false);
 updateModeButtons();
 buildGrid();

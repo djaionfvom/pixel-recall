@@ -1,36 +1,33 @@
-# Pixel Recall — v11 custom grid sizes
+# Pixel Recall v13 — Friend challenge exit
 
-This build keeps Daily mode, Journey mode, analytics, the iOS grid-scrolling fix, and the share-result popup. It adds a backend-free Custom mode for friend challenges.
+This build adds a clear **Back to normal Pixel Recall** button while playing an accepted friend challenge. It opens the clean homepage without the custom challenge parameters. Switching directly to Daily or Journey also clears the challenge URL, so refreshing does not reopen the friend challenge.
 
-## Custom mode
+This build keeps Daily, Journey, variable-size Custom challenges, analytics, the iOS grid-scrolling fix, and the modal fallbacks. It unifies the native sharing behavior.
 
-1. Open **Custom**.
-2. Choose a grid size from **5×5 through 12×12**, then draw any non-empty pattern.
-3. Press **Create challenge link**.
-4. Copy or share the generated link.
-5. A friend opens the link, memorizes the pattern for 2.3 seconds, redraws it, and receives a normal Pixel Recall score.
+## Sharing rules
 
-The selected grid size and pattern are encoded into the URL using `size` and `challenge` parameters. No account, database, or backend is required. Custom patterns are not published in a public gallery.
+- **Daily and Journey results:** the primary **Share result** action opens the native share sheet only when the generated PNG screenshot can be attached. The screenshot is mandatory.
+- **Custom challenge creation:** the native share payload always includes the exact challenge URL in both the `url` field and the visible message text.
+- **Custom challenge results:** the native share payload includes the generated result screenshot and the original challenge URL. The URL is included in both the text and `url` fields.
+- When native screenshot sharing is unavailable, the existing modal opens with image preview, copy-image, download-image, copy-link, and destination options.
+
+## Default custom challenge message
+
+`I made you a 7×7 Pixel Recall memory challenge. Memorize the pattern, redraw it, and send me your score!`
+
+The actual selected grid size and challenge URL are inserted automatically.
 
 ## Included analytics
 
-- `game_started`
-- `game_completed`
-- `custom_pattern_created`
-- `custom_challenge_opened`
+Existing events remain, and successful native sharing adds:
 
-Custom events include the number of selected pattern cells and the chosen grid size. Standard completion events continue to include mode, accuracy, correct/missed/extra counts, puzzle information, and Journey pass state.
+- `result_shared`
+- `custom_challenge_shared`
 
-## Other included improvements
+The result event records whether a screenshot and custom challenge link were included.
 
-- Share result opens in a modal popup.
-- The custom-link creator also opens in an accessible modal.
-- Modals close with the close button, Escape, or a click/tap outside.
-- iOS page scrolling works outside the active drawing phase.
-- Search metadata, Open Graph metadata, social preview image, sitemap, robots file, CNAME, and Google verification file remain included.
-
-## Deploy to GitHub Pages
+## Deployment
 
 Upload the contents of this folder to the repository root. Keep `index.html`, `style.css`, `script.js`, `icon.svg`, `og-image.png`, `CNAME`, `robots.txt`, and `sitemap.xml` at the root level.
 
-After deployment, create Custom patterns in more than one grid size and open the generated link in a private browser window to confirm the full friend-challenge flow.
+The Web Share API requires HTTPS. After deployment, test Daily, Journey, Custom challenge creation, and a completed Custom challenge on a phone that supports file sharing.
