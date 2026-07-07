@@ -575,3 +575,13 @@ body.share-modal-open {
     grid-template-columns: 1fr;
   }
 }
+
+/* v18: reliable custom challenge sharing */
+.challenge-share-destinations {
+  margin-top: 16px;
+}
+
+.challenge-panel-actions [hidden] {
+  display: none;
+}
+

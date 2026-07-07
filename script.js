@@ -1631,6 +1631,9 @@ const challengePanelMessage = document.querySelector("#challengePanelMessage");
 const challengeLinkInput = document.querySelector("#challengeLinkInput");
 const copyChallengeLinkBtn = document.querySelector("#copyChallengeLinkBtn");
 const shareChallengeLinkBtn = document.querySelector("#shareChallengeLinkBtn");
+const challengeWhatsAppShare = document.querySelector("#challengeWhatsAppShare");
+const challengeXShare = document.querySelector("#challengeXShare");
+const challengeEmailShare = document.querySelector("#challengeEmailShare");
 const openChallengeLink = document.querySelector("#openChallengeLink");
 const closeChallengePanelBtn = document.querySelector("#closeChallengePanelBtn");
 const scaleDownBtn = document.querySelector("#scaleDownBtn");
@@ -1796,6 +1799,50 @@ function customChallengeUrl(code, size = CUSTOM_DEFAULT_SIZE) {
   url.searchParams.set("challenge", code);
   url.searchParams.set("size", String(size));
   return url.toString();
+}
+
+function isProbablyMobileDevice() {
+  if (typeof navigator.userAgentData?.mobile === "boolean") {
+    return navigator.userAgentData.mobile;
+  }
+
+  const userAgent = navigator.userAgent || "";
+  const isMobileUserAgent = /Android|iPhone|iPad|iPod|Mobile|Tablet/i.test(userAgent);
+  const isIPadDesktopMode = navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1;
+  return isMobileUserAgent || isIPadDesktopMode;
+}
+
+function canUseNativeChallengeShare() {
+  return (
+    window.isSecureContext &&
+    isProbablyMobileDevice() &&
+    typeof navigator.share === "function"
+  );
+}
+
+function challengeGridSizeFromUrl(urlString) {
+  try {
+    const url = new URL(urlString);
+    return parseCustomGridSize(url.searchParams.get("size"), customBuilderSize);
+  } catch (error) {
+    return customBuilderSize;
+  }
+}
+
+function customChallengeShareText() {
+  const size = challengeGridSizeFromUrl(currentChallengeUrl);
+  return `I made you a ${size}×${size} Pixel Recall memory challenge. Can you redraw it from memory?`;
+}
+
+function configureCustomChallengeLinks() {
+  if (!currentChallengeUrl) return;
+
+  const text = customChallengeShareText();
+  const combined = `${text}\n\n${currentChallengeUrl}`;
+
+  challengeWhatsAppShare.href = `https://wa.me/?text=${encodeURIComponent(combined)}`;
+  challengeXShare.href = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(currentChallengeUrl)}`;
+  challengeEmailShare.href = `mailto:?subject=${encodeURIComponent("Pixel Recall friend challenge")}&body=${encodeURIComponent(combined)}`;
 }
 
 function dailyInfo() {
@@ -2622,8 +2669,15 @@ function showChallengePanel(url) {
   challengeLinkInput.value = url;
   openChallengeLink.href = url;
   copyChallengeLinkBtn.textContent = "Copy challenge link";
-  shareChallengeLinkBtn.textContent = navigator.share ? "Share challenge" : "Copy for sharing";
-  challengePanelMessage.textContent = "Send this link to a friend. The pattern is stored inside the link, so no account or backend is needed.";
+
+  const nativeShareAvailable = canUseNativeChallengeShare();
+  shareChallengeLinkBtn.hidden = !nativeShareAvailable;
+  shareChallengeLinkBtn.textContent = "Share challenge";
+
+  configureCustomChallengeLinks();
+  challengePanelMessage.textContent = nativeShareAvailable
+    ? "Share the challenge from your device, copy its link, or send it with one of the options below."
+    : "Copy the challenge link or send it with WhatsApp, X, or Email. The pattern is stored inside the link.";
 
   challengeModalReturnFocus = document.activeElement instanceof HTMLElement
     ? document.activeElement
@@ -2666,8 +2720,8 @@ async function copyCustomChallengeLink() {
 async function shareCustomChallengeLink() {
   if (!currentChallengeUrl) return;
 
-  if (typeof navigator.share !== "function") {
-    await copyCustomChallengeLink();
+  if (!canUseNativeChallengeShare()) {
+    challengePanelMessage.textContent = "Native sharing is not available here. Use Copy challenge link, WhatsApp, X, or Email instead.";
     return;
   }
 
@@ -2676,14 +2730,14 @@ async function shareCustomChallengeLink() {
   try {
     await navigator.share({
       title: "Pixel Recall friend challenge",
-      text: "I made a Pixel Recall pattern for you. Can you redraw it from memory?",
+      text: customChallengeShareText(),
       url: currentChallengeUrl
     });
     challengePanelMessage.textContent = "Challenge shared.";
   } catch (error) {
     if (error?.name !== "AbortError") {
       console.warn("Challenge sharing failed.", error);
-      challengePanelMessage.textContent = "The share menu could not open. Use Copy challenge link instead.";
+      challengePanelMessage.textContent = "The share menu could not open. Use Copy challenge link, WhatsApp, X, or Email instead.";
     }
   } finally {
     shareChallengeLinkBtn.disabled = false;

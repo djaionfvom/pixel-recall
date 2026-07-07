@@ -23,7 +23,7 @@
   <meta name="twitter:image" content="https://pixelrecall.net/og-image.png" />
 
   <link rel="icon" href="icon.svg" type="image/svg+xml" />
-  <link rel="stylesheet" href="style.css?v=v11-custom-grid-size" />
+  <link rel="stylesheet" href="style.css?v=v18-reliable-custom-sharing" />
 
   <!-- Google tag (gtag.js) -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-20214X136N"></script>
@@ -181,14 +181,20 @@
       <label class="challenge-link-label" for="challengeLinkInput">Challenge link</label>
       <input id="challengeLinkInput" class="challenge-link-input" type="text" readonly />
 
+      <div class="share-destinations challenge-share-destinations" aria-label="Challenge share destinations">
+        <a id="challengeWhatsAppShare" class="share-destination" target="_blank" rel="noopener noreferrer">WhatsApp</a>
+        <a id="challengeXShare" class="share-destination" target="_blank" rel="noopener noreferrer">X</a>
+        <a id="challengeEmailShare" class="share-destination">Email</a>
+      </div>
+
       <div class="challenge-panel-actions">
         <button id="copyChallengeLinkBtn" type="button">Copy challenge link</button>
-        <button id="shareChallengeLinkBtn" class="secondary" type="button">Share challenge</button>
+        <button id="shareChallengeLinkBtn" class="secondary" type="button" hidden>Share challenge</button>
         <a id="openChallengeLink" class="button-link secondary" target="_blank" rel="noopener noreferrer">Open challenge</a>
       </div>
     </section>
   </div>
 
-  <script src="script.js?v=v11-custom-grid-size"></script>
+  <script src="script.js?v=v18-reliable-custom-sharing"></script>
 </body>
 </html>
