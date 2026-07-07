@@ -1609,6 +1609,7 @@ const message = document.querySelector("#message");
 const puzzleName = document.querySelector("#puzzleName");
 const levelInfo = document.querySelector("#levelInfo");
 const scoreBox = document.querySelector("#scoreBox");
+const shareModal = document.querySelector("#shareModal");
 const sharePanel = document.querySelector("#sharePanel");
 const sharePanelMessage = document.querySelector("#sharePanelMessage");
 const resultPreview = document.querySelector("#resultPreview");
@@ -1650,6 +1651,7 @@ let previewTimer = null;
 let lastResult = null;
 let preparedShare = null;
 let previewObjectUrl = null;
+let shareModalReturnFocus = null;
 let sharePreparationPromise = null;
 let strokeMode = null; // "paint" or "erase"
 
@@ -1677,6 +1679,12 @@ function applyUiScale(nextScale, persist = true) {
 
 function utcDayStart(date = new Date()) {
   return Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
+}
+
+function trackEvent(name, parameters = {}) {
+  if (typeof window.gtag !== "function") return;
+
+  window.gtag("event", name, parameters);
 }
 
 function dailyInfo() {
@@ -1733,6 +1741,7 @@ function buildGrid() {
   const puzzle = currentPuzzle();
 
   selected.clear();
+  grid.classList.remove("drawing-active");
   canDraw = false;
   isDrawing = false;
   activePointerId = null;
@@ -1806,12 +1815,20 @@ function hidePattern() {
   document.querySelectorAll(".cell").forEach((cell) => {
     cell.className = "cell";
   });
+  grid.classList.add("drawing-active");
   canDraw = true;
   message.textContent = "Now redraw it from memory. Drag or click squares.";
 }
 
 function startGame() {
   buildGrid();
+
+  trackEvent("game_started", {
+    game_mode: mode,
+    daily_number: mode === "daily" ? dailyInfo().dailyNumber : 0,
+    journey_level: mode === "journey" ? level + 1 : 0
+  });
+
   startBtn.disabled = true;
   checkBtn.disabled = false;
   clearBtn.disabled = false;
@@ -1872,6 +1889,18 @@ function checkAnswer() {
   const extra = [...selected].filter((i) => !target.has(i)).length;
   const accuracy = Math.max(0, Math.round((correct / (puzzle.cells.length + extra)) * 100));
 
+  trackEvent("game_completed", {
+    game_mode: resultMode,
+    accuracy,
+    correct,
+    missed,
+    extra,
+    puzzle_name: puzzle.name,
+    daily_number: resultMode === "daily" ? resultDailyNumber : 0,
+    journey_level: resultMode === "journey" ? resultLevel : 0,
+    passed: resultMode === "journey" && accuracy >= PASS_SCORE ? 1 : 0
+  });
+
   const cellStates = [...document.querySelectorAll(".cell")].map((cell) => {
     if (cell.classList.contains("correct")) return "correct";
     if (cell.classList.contains("extra")) return "extra";
@@ -1897,6 +1926,7 @@ function checkAnswer() {
   puzzleName.hidden = false;
   message.textContent = `Correct: ${correct} · Missed: ${missed} · Extra: ${extra}`;
 
+  grid.classList.remove("drawing-active");
   canDraw = false;
   clearBtn.disabled = true;
   checkBtn.disabled = true;
@@ -1905,7 +1935,7 @@ function checkAnswer() {
   startBtn.disabled = false;
 
   if (resultMode === "daily") {
-    startBtn.textContent = "Play Again";
+    startBtn.textContent = "Try Again";
     const bestKey = `pixelRecallDailyBest-${resultDailyNumber}`;
     const previousBest = Number(localStorage.getItem(bestKey)) || 0;
     if (accuracy > previousBest) localStorage.setItem(bestKey, String(accuracy));
@@ -2197,10 +2227,16 @@ function clearPreviewObjectUrl() {
 }
 
 function hideSharePanel() {
-  if (!sharePanel) return;
-  sharePanel.hidden = true;
+  if (!shareModal || shareModal.hidden) return;
+
+  shareModal.hidden = true;
+  document.body.classList.remove("share-modal-open");
   clearPreviewObjectUrl();
   resultPreview.removeAttribute("src");
+
+  const focusTarget = shareModalReturnFocus;
+  shareModalReturnFocus = null;
+  if (focusTarget?.isConnected) focusTarget.focus();
 }
 
 function canonicalShareUrl() {
@@ -2260,8 +2296,14 @@ function showSharePanel(asset) {
     ? "Share the screenshot through your phone, share the result link, or copy and download the image."
     : "Share the result link, or copy and download the result image.";
 
-  sharePanel.hidden = false;
-  sharePanel.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  shareModalReturnFocus = document.activeElement instanceof HTMLElement
+    ? document.activeElement
+    : shareBtn;
+
+  shareModal.hidden = false;
+  document.body.classList.add("share-modal-open");
+  sharePanel.scrollTop = 0;
+  requestAnimationFrame(() => closeSharePanelBtn.focus());
 }
 
 async function shareResult() {
@@ -2427,6 +2469,42 @@ copyLinkBtn.addEventListener("click", copyShareLink);
 copyImageBtn.addEventListener("click", copyPreparedImage);
 downloadImageBtn.addEventListener("click", downloadPreparedImage);
 closeSharePanelBtn.addEventListener("click", hideSharePanel);
+shareModal.addEventListener("click", (event) => {
+  if (event.target === shareModal) hideSharePanel();
+});
+
+document.addEventListener("keydown", (event) => {
+  if (!shareModal || shareModal.hidden) return;
+
+  if (event.key === "Escape") {
+    event.preventDefault();
+    hideSharePanel();
+    return;
+  }
+
+  if (event.key !== "Tab") return;
+
+  const focusable = [...sharePanel.querySelectorAll(
+    'a[href], button:not([disabled]):not([hidden]), [tabindex]:not([tabindex="-1"])'
+  )].filter((element) => !element.hidden && element.offsetParent !== null);
+
+  if (focusable.length === 0) {
+    event.preventDefault();
+    sharePanel.focus();
+    return;
+  }
+
+  const first = focusable[0];
+  const last = focusable[focusable.length - 1];
+
+  if (event.shiftKey && document.activeElement === first) {
+    event.preventDefault();
+    last.focus();
+  } else if (!event.shiftKey && document.activeElement === last) {
+    event.preventDefault();
+    first.focus();
+  }
+});
 dailyModeBtn.addEventListener("click", () => setMode("daily"));
 journeyModeBtn.addEventListener("click", () => setMode("journey"));
 scaleDownBtn.addEventListener("click", () => applyUiScale(uiScale - UI_SCALE_STEP));
@@ -2434,7 +2512,7 @@ scaleResetBtn.addEventListener("click", () => applyUiScale(1));
 scaleUpBtn.addEventListener("click", () => applyUiScale(uiScale + UI_SCALE_STEP));
 window.addEventListener("resize", () => sizeGrid(currentPuzzle()));
 
-console.info("Pixel Recall build: daily-365-v3");
+console.info("Pixel Recall build: v9-share-popup");
 applyUiScale(uiScale, false);
 updateModeButtons();
 buildGrid();

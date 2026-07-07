@@ -1,54 +1,26 @@
-# Pixel Recall — 365 daily 8×8 objects
+# Pixel Recall — v8 clean and analytics update
 
-This version keeps the existing grid size, controls, Journey mode, and custom share panel, while updating Daily mode to use **365 unique 8×8 object patterns**. Every Daily puzzle uses a **2.3-second** preview.
+This build adds the first retention and measurement improvements based on player feedback.
 
-The puzzle header is now more compact: the object title and `Daily #… · 8×8 · 2.3s` metadata sit on the same wrapping line.
+## Changes
 
-The custom share menu avoids unreliable desktop native Web Share calls.
+- Fixes iOS page scrolling from the grid before and after the drawing phase.
+- Keeps touch drawing locked to the grid while a puzzle is actively being redrawn.
+- Sends `game_started` and `game_completed` events to GA4.
+- Includes mode, accuracy, pixel counts, puzzle name, daily number, Journey level, and pass state in analytics.
+- Displays the Daily personal best after a result.
+- Adds a local Daily streak stored in the browser.
+- Adds search metadata, canonical URL, Open Graph tags, and X/Twitter card tags.
+- Adds an `og-image.png` social preview image.
+- Updates asset cache versions to `v8-retention`.
 
-After a result, **Share result** opens a custom panel with:
+## Deploy to GitHub Pages
 
-- WhatsApp
-- Facebook
-- X
-- Email
-- Copy link
-- Copy image
-- Download image
-- Share image on supported phones
+Upload the contents of this folder to the repository root. Keep `index.html`, `style.css`, `script.js`, `icon.svg`, `og-image.png`, `CNAME`, `robots.txt`, and `sitemap.xml` at the root level.
 
-When opened locally, social buttons share the public GitHub Pages URL. When deployed, they share the current website URL. The actual result PNG is always available to copy or download.
+After deployment, test analytics in GA4 Realtime by pressing **Start**, finishing a puzzle, and pressing **Check**. Look for `game_started` and `game_completed`.
 
-## GitHub Pages
+## Share-result popup
 
-Upload `index.html`, `style.css`, `script.js`, `icon.svg`, and `README.md` to the repository root.
+The Share result controls now open in a centered modal window instead of appearing below the game. The modal locks background scrolling, remains scrollable on small screens, and closes with the close button, Escape key, or a click/tap outside the window.
 
-
-## Toggle-drag drawing
-
-Drawing now behaves the same with touch and mouse. Each cell touched during a drag toggles once: empty cells become filled and filled cells become empty. A cell is changed only once per gesture, which prevents pointer jitter from undoing the action.
-
-
-## Daily heading and zoom
-
-- Daily mode now shows only the daily number before and after play.
-- The object name appears only during the memory preview and is hidden when drawing begins.
-- Grid size and preview duration are no longer shown in the Daily heading.
-- Browser zoom is explicitly enabled from 50% to 500%, and two-finger pinch zoom is allowed over the grid without changing the default layout size.
-
-
-## Version 3 interface changes
-
-- The object name appears during the memory preview and returns on the result screen.
-- The intro is more compact, with the icon and title on one line.
-- The new interface-size control can shrink the complete game to 65%, or enlarge it to 120%, without changing the default 100% layout. The selected size is remembered.
-
-
-## Header layout
-
-The interface-size control is pinned to the top-right column of the puzzle card, aligned with the Daily/Level label. The object name appears below the round label when visible, and the result score sits below the size control.
-
-
-## Version 6 zoom placement
-
-The interface-size control now sits outside the game card in a fixed position at the top-left of the viewport, slightly above the “Daily visual memory puzzle” eyebrow. The card header contains only the round label/object name and score

@@ -213,10 +213,14 @@ h1 {
   display: grid;
   gap: 7px;
   justify-content: center;
-  /* Keep one-finger drawing while allowing two-finger browser zoom. */
-  touch-action: pinch-zoom;
+  /* Allow page scrolling and pinch zoom until the drawing phase begins. */
+  touch-action: pan-y pinch-zoom;
   margin: 20px auto;
   user-select: none;
+}
+
+.grid.drawing-active {
+  touch-action: none;
 }
 
 .cell {
@@ -323,29 +327,61 @@ button:disabled {
 }
 
 
-.share-panel {
-  margin-top: 14px;
-  padding: 16px;
-  border: 1px solid rgba(255, 255, 255, .10);
-  border-radius: 20px;
-  background: rgba(24, 28, 47, .92);
+
+body.share-modal-open {
+  overflow: hidden;
 }
 
-.share-panel[hidden] {
+.share-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(6, 8, 16, .78);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.share-modal[hidden] {
   display: none;
 }
 
+.share-panel {
+  width: min(680px, 100%);
+  max-height: min(90dvh, 820px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 18px;
+  border: 1px solid rgba(255, 255, 255, .13);
+  border-radius: 22px;
+  background: rgba(24, 28, 47, .98);
+  box-shadow: 0 28px 90px rgba(0, 0, 0, .62);
+}
+
+.share-panel:focus {
+  outline: none;
+}
+
 .share-panel-header {
+  position: sticky;
+  top: -18px;
+  z-index: 2;
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 14px;
-  margin-bottom: 14px;
+  margin: -18px -18px 14px;
+  padding: 18px 18px 12px;
+  border-radius: 22px 22px 0 0;
+  background: rgba(24, 28, 47, .98);
 }
 
 .share-panel-title {
   margin: 0 0 4px;
   color: var(--ink);
+  font-size: 18px;
   font-weight: 800;
 }
 
@@ -363,6 +399,7 @@ button:disabled {
   padding: 0;
   display: grid;
   place-items: center;
+  flex: 0 0 auto;
   background: #2b314f;
   color: var(--ink);
   font-size: 24px;
@@ -372,7 +409,9 @@ button:disabled {
 .result-preview {
   display: block;
   width: 100%;
+  max-height: min(50dvh, 520px);
   height: auto;
+  object-fit: contain;
   border-radius: 14px;
   border: 1px solid rgba(255, 255, 255, .08);
   background: var(--card);
@@ -416,6 +455,17 @@ button:disabled {
 }
 
 @media (max-width: 520px) {
+  .share-modal {
+    align-items: end;
+    padding: 10px;
+  }
+
+  .share-panel {
+    width: 100%;
+    max-height: 92dvh;
+    border-radius: 22px 22px 14px 14px;
+  }
+
   .share-destinations {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
