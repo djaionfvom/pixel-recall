@@ -584,3 +584,8 @@ body.share-modal-open {
     grid-template-columns: 1fr;
   }
 }
+
+/* v14 hybrid sharing: make the reliable screenshot action the clear primary choice. */
+#nativeImageShareBtn:not([hidden]) {
+  grid-column: 1 / -1;
+}

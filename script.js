@@ -1622,7 +1622,6 @@ const facebookShare = document.querySelector("#facebookShare");
 const xShare = document.querySelector("#xShare");
 const emailShare = document.querySelector("#emailShare");
 const nativeImageShareBtn = document.querySelector("#nativeImageShareBtn");
-const copyLinkBtn = document.querySelector("#copyLinkBtn");
 const copyImageBtn = document.querySelector("#copyImageBtn");
 const downloadImageBtn = document.querySelector("#downloadImageBtn");
 const closeSharePanelBtn = document.querySelector("#closeSharePanelBtn");
@@ -1971,7 +1970,7 @@ function hidePattern() {
 
 function startGame() {
   if (isCustomBuilder()) {
-    createCustomChallenge();
+    void createCustomChallenge();
     return;
   }
 
@@ -2017,7 +2016,7 @@ function clearDrawing() {
   document.querySelectorAll(".cell").forEach((cell) => cell.classList.remove("selected"));
 }
 
-function createCustomChallenge() {
+async function createCustomChallenge() {
   if (!isCustomBuilder()) return;
 
   if (selected.size === 0) {
@@ -2027,13 +2026,48 @@ function createCustomChallenge() {
 
   const code = encodeCustomPattern(selected, customBuilderSize);
   const url = customChallengeUrl(code, customBuilderSize);
+  const size = customBuilderSize;
+  currentChallengeUrl = url;
 
   trackEvent("custom_pattern_created", {
     selected_cells: selected.size,
-    grid_size: customBuilderSize
+    grid_size: size
   });
 
-  showChallengePanel(url);
+  // Link sharing is reliable across more devices, so try the native sheet first.
+  // The controlled challenge popup remains the fallback for unsupported or failed shares.
+  if (typeof navigator.share !== "function" || window.location.protocol === "file:") {
+    showChallengePanel(url);
+    return;
+  }
+
+  startBtn.disabled = true;
+  startBtn.textContent = "Opening share menu...";
+
+  try {
+    await navigator.share({
+      title: "A Pixel Recall challenge for you",
+      text: customChallengeShareText(size, url),
+      url
+    });
+    message.textContent = "Challenge shared with its link. You can press the button again to share it elsewhere.";
+    trackEvent("custom_challenge_shared", {
+      custom_grid_size: size,
+      share_method: "native_first",
+      included_challenge_link: 1
+    });
+  } catch (error) {
+    if (error?.name === "AbortError") {
+      message.textContent = "Sharing cancelled. Press Create challenge link to try again.";
+    } else {
+      console.warn("Native challenge sharing failed.", error);
+      showChallengePanel(url);
+      challengePanelMessage.textContent = "The system share menu could not open. Copy the challenge link or try another option below.";
+    }
+  } finally {
+    startBtn.disabled = false;
+    startBtn.textContent = "Create challenge link";
+  }
 }
 
 function checkAnswer() {
@@ -2397,15 +2431,18 @@ function resultShareTitle() {
   return `Pixel Recall Journey · Level ${lastResult.level}`;
 }
 
+function resultShareTextWithLink() {
+  return `${shareMessageText()}
+
+${canonicalShareUrl()}`;
+}
+
 function resultNativeShareData(file) {
   const url = canonicalShareUrl();
-  const text = `${shareMessageText()}
-
-${url}`;
 
   return {
     title: resultShareTitle(),
-    text,
+    text: resultShareTextWithLink(),
     url,
     files: [file]
   };
@@ -2468,7 +2505,7 @@ function shareMessageText() {
 function configureShareLinks() {
   const url = canonicalShareUrl();
   const text = shareMessageText();
-  const combined = `${text}\n${url}`;
+  const combined = resultShareTextWithLink();
 
   whatsAppShare.href = `https://wa.me/?text=${encodeURIComponent(combined)}`;
   facebookShare.href = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`;
@@ -2489,17 +2526,16 @@ function showSharePanel(asset) {
   );
   copyImageBtn.disabled = !canCopyImage;
   copyImageBtn.textContent = canCopyImage ? "Copy image" : "Copy unavailable";
-  copyLinkBtn.textContent = "Copy link";
   downloadImageBtn.textContent = "Download image";
 
   const nativeAvailable = canNativeShareResult(asset.file);
   nativeImageShareBtn.hidden = !nativeAvailable;
   nativeImageShareBtn.disabled = false;
-  nativeImageShareBtn.textContent = "Share result";
+  nativeImageShareBtn.textContent = "Share screenshot";
 
   sharePanelMessage.textContent = nativeAvailable
-    ? "Share the result with its screenshot, or use the copy and download options below."
-    : "This browser cannot attach the screenshot to its share menu. Copy or download the result image instead.";
+    ? "Share the screenshot through your device, or copy and download it below. Social buttons share the result text and link only."
+    : "This browser cannot attach the screenshot to its share menu. Copy or download the image, then attach it manually. Social buttons share text and link only.";
 
   shareModalReturnFocus = document.activeElement instanceof HTMLElement
     ? document.activeElement
@@ -2548,32 +2584,14 @@ async function shareResult() {
     }
   }
 
-  if (!canNativeShareResult(preparedShare.file)) {
-    showSharePanel(preparedShare);
-    return;
-  }
-
-  shareBtn.disabled = true;
-  shareBtn.textContent = "Opening share menu...";
-
-  try {
-    await openNativeResultShare();
-    trackEvent("result_shared", {
-      game_mode: lastResult.mode,
-      share_method: "native",
-      included_screenshot: 1,
-      included_challenge_link: lastResult.mode === "custom" ? 1 : 0
-    });
-  } catch (error) {
-    if (error?.name !== "AbortError") {
-      console.warn("Native result sharing failed.", error);
-      showSharePanel(preparedShare);
-      sharePanelMessage.textContent = "The share menu could not attach the screenshot. Use Copy image or Download image instead.";
-    }
-  } finally {
-    shareBtn.disabled = false;
-    shareBtn.textContent = "Share result";
-  }
+  // Always open Pixel Recall's predictable result popup first.
+  // Native file sharing remains available as an explicit screenshot action.
+  showSharePanel(preparedShare);
+  trackEvent("result_share_options_opened", {
+    game_mode: lastResult.mode,
+    native_screenshot_available: canNativeShareResult(preparedShare.file) ? 1 : 0,
+    included_challenge_link: lastResult.mode === "custom" ? 1 : 0
+  });
 }
 
 async function nativeSharePreparedImage() {
@@ -2600,7 +2618,7 @@ async function nativeSharePreparedImage() {
     }
   } finally {
     nativeImageShareBtn.disabled = false;
-    nativeImageShareBtn.textContent = "Share result";
+    nativeImageShareBtn.textContent = "Share screenshot";
   }
 }
 
@@ -2627,19 +2645,6 @@ async function copyTextToClipboard(text) {
   } catch (error) {
     console.warn("Fallback text copy failed.", error);
     return false;
-  }
-}
-
-async function copyShareLink() {
-  const copied = await copyTextToClipboard(canonicalShareUrl());
-  if (copied) {
-    copyLinkBtn.textContent = "Link copied";
-    sharePanelMessage.textContent = "Link copied. Paste it anywhere.";
-    setTimeout(() => {
-      copyLinkBtn.textContent = "Copy link";
-    }, 2200);
-  } else {
-    sharePanelMessage.textContent = "The browser blocked link copying. Select the address from the browser bar instead.";
   }
 }
 
@@ -2677,6 +2682,12 @@ function downloadPreparedImage() {
 function syncModalBodyLock() {
   const modalOpen = (shareModal && !shareModal.hidden) || (challengeModal && !challengeModal.hidden);
   document.body.classList.toggle("share-modal-open", Boolean(modalOpen));
+}
+
+function customChallengeShareText(size, url) {
+  return `I made you a ${size}×${size} Pixel Recall memory challenge. Memorize the pattern, redraw it, and send me your score!
+
+${url}`;
 }
 
 function showChallengePanel(url) {
@@ -2737,13 +2748,10 @@ async function shareCustomChallengeLink() {
   shareChallengeLinkBtn.textContent = "Opening share menu...";
   try {
     const size = customBuilderSize;
-    const challengeText = `I made you a ${size}×${size} Pixel Recall memory challenge. Memorize the pattern, redraw it, and send me your score!
-
-${currentChallengeUrl}`;
 
     await navigator.share({
       title: "A Pixel Recall challenge for you",
-      text: challengeText,
+      text: customChallengeShareText(size, currentChallengeUrl),
       // The URL is also included in the visible text so it is not lost by apps
       // that handle Web Share fields differently.
       url: currentChallengeUrl
@@ -2847,7 +2855,6 @@ checkBtn.addEventListener("click", checkAnswer);
 shareBtn.addEventListener("click", shareResult);
 backToNormalBtn.addEventListener("click", returnToNormalPixelRecall);
 nativeImageShareBtn.addEventListener("click", nativeSharePreparedImage);
-copyLinkBtn.addEventListener("click", copyShareLink);
 copyImageBtn.addEventListener("click", copyPreparedImage);
 downloadImageBtn.addEventListener("click", downloadPreparedImage);
 closeSharePanelBtn.addEventListener("click", hideSharePanel);

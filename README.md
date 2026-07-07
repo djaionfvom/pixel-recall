@@ -1,33 +1,49 @@
-# Pixel Recall v13 — Friend challenge exit
+# Pixel Recall v15 — Streamlined result sharing
 
-This build adds a clear **Back to normal Pixel Recall** button while playing an accepted friend challenge. It opens the clean homepage without the custom challenge parameters. Switching directly to Daily or Journey also clears the challenge URL, so refreshing does not reopen the friend challenge.
+This build uses different sharing entry points for result images and custom challenge links, based on what browsers handle most reliably.
 
-This build keeps Daily, Journey, variable-size Custom challenges, analytics, the iOS grid-scrolling fix, and the modal fallbacks. It unifies the native sharing behavior.
+## Result sharing
 
-## Sharing rules
+Daily, Journey, and completed friend-challenge results now always open the Pixel Recall share popup first.
 
-- **Daily and Journey results:** the primary **Share result** action opens the native share sheet only when the generated PNG screenshot can be attached. The screenshot is mandatory.
-- **Custom challenge creation:** the native share payload always includes the exact challenge URL in both the `url` field and the visible message text.
-- **Custom challenge results:** the native share payload includes the generated result screenshot and the original challenge URL. The URL is included in both the text and `url` fields.
-- When native screenshot sharing is unavailable, the existing modal opens with image preview, copy-image, download-image, copy-link, and destination options.
+The popup includes:
 
-## Default custom challenge message
+- Result screenshot preview
+- **Share screenshot** through the native device menu when PNG file sharing is supported
+- Copy image when the browser allows image clipboard access
+- Download image
+- WhatsApp, Facebook, X, and email links for result text and the relevant game/challenge link
 
-`I made you a 7×7 Pixel Recall memory challenge. Memorize the pattern, redraw it, and send me your score!`
+The social destination links cannot automatically attach a browser-generated PNG. The popup states this clearly so users can copy or download the screenshot and attach it manually. Completed custom challenges retain the original custom challenge URL in the share text and link.
 
-The actual selected grid size and challenge URL are inserted automatically.
+## Custom-pattern creation
 
-## Included analytics
+After creating a custom pattern, Pixel Recall tries the native link-sharing menu first. The exact challenge URL is included in both the visible message and the URL field.
 
-Existing events remain, and successful native sharing adds:
+When native link sharing is unavailable or fails, the controlled challenge popup opens with:
 
-- `result_shared`
-- `custom_challenge_shared`
+- Copy challenge link
+- Share challenge
+- Open challenge
 
-The result event records whether a screenshot and custom challenge link were included.
+Cancelling the native menu leaves the pattern intact so the creator can press **Create challenge link** again.
+
+## Other retained features
+
+- Daily, Journey, and Custom modes
+- Custom grid sizes from 5×5 through 12×12
+- Back to normal Pixel Recall from accepted friend challenges
+- Result-image generation
+- GA4 game and sharing events
+- iOS grid/page scrolling behavior
+- Modal keyboard controls and mobile layout
 
 ## Deployment
 
 Upload the contents of this folder to the repository root. Keep `index.html`, `style.css`, `script.js`, `icon.svg`, `og-image.png`, `CNAME`, `robots.txt`, and `sitemap.xml` at the root level.
 
-The Web Share API requires HTTPS. After deployment, test Daily, Journey, Custom challenge creation, and a completed Custom challenge on a phone that supports file sharing.
+Native Web Share features require HTTPS and vary by operating system and browser. Test the screenshot action on at least one iPhone/Android device and the fallback options on a laptop after deployment.
+
+## Version 15 change
+
+The result-share popup no longer includes **Copy text + link** or **Copy link**. Custom challenge creation still keeps its dedicated challenge-link controls.
