@@ -1,52 +1,36 @@
-# Pixel Recall v16 — Simplified result sharing
+# Pixel Recall — v11 custom grid sizes
 
-This build uses different sharing entry points for result images and custom challenge links, based on what browsers handle most reliably.
+This build keeps Daily mode, Journey mode, analytics, the iOS grid-scrolling fix, and the share-result popup. It adds a backend-free Custom mode for friend challenges.
 
-## Result sharing
+## Custom mode
 
-Daily, Journey, and completed friend-challenge results now always open the Pixel Recall share popup first.
+1. Open **Custom**.
+2. Choose a grid size from **5×5 through 12×12**, then draw any non-empty pattern.
+3. Press **Create challenge link**.
+4. Copy or share the generated link.
+5. A friend opens the link, memorizes the pattern for 2.3 seconds, redraws it, and receives a normal Pixel Recall score.
 
-The popup includes:
+The selected grid size and pattern are encoded into the URL using `size` and `challenge` parameters. No account, database, or backend is required. Custom patterns are not published in a public gallery.
 
-- Result screenshot preview
-- Copy image when the browser allows image clipboard access
-- Download image
-- WhatsApp, Facebook, X, and email links for result text and the relevant game/challenge link
+## Included analytics
 
-The social destination links cannot automatically attach a browser-generated PNG. The popup states this clearly so users can copy or download the screenshot and attach it manually. Completed custom challenges retain the original custom challenge URL in the share text and link.
+- `game_started`
+- `game_completed`
+- `custom_pattern_created`
+- `custom_challenge_opened`
 
-## Custom-pattern creation
+Custom events include the number of selected pattern cells and the chosen grid size. Standard completion events continue to include mode, accuracy, correct/missed/extra counts, puzzle information, and Journey pass state.
 
-After creating a custom pattern, Pixel Recall tries the native link-sharing menu first. The exact challenge URL is included in both the visible message and the URL field.
+## Other included improvements
 
-When native link sharing is unavailable or fails, the controlled challenge popup opens with:
+- Share result opens in a modal popup.
+- The custom-link creator also opens in an accessible modal.
+- Modals close with the close button, Escape, or a click/tap outside.
+- iOS page scrolling works outside the active drawing phase.
+- Search metadata, Open Graph metadata, social preview image, sitemap, robots file, CNAME, and Google verification file remain included.
 
-- Copy challenge link
-- Share challenge
-- Open challenge
-
-Cancelling the native menu leaves the pattern intact so the creator can press **Create challenge link** again.
-
-## Other retained features
-
-- Daily, Journey, and Custom modes
-- Custom grid sizes from 5×5 through 12×12
-- Back to normal Pixel Recall from accepted friend challenges
-- Result-image generation
-- GA4 game and sharing events
-- iOS grid/page scrolling behavior
-- Modal keyboard controls and mobile layout
-
-## Deployment
+## Deploy to GitHub Pages
 
 Upload the contents of this folder to the repository root. Keep `index.html`, `style.css`, `script.js`, `icon.svg`, `og-image.png`, `CNAME`, `robots.txt`, and `sitemap.xml` at the root level.
 
-Native link sharing for custom-pattern creation requires HTTPS and varies by operating system and browser. Test custom challenge sharing and the result popup after deployment.
-
-## Version 15 change
-
-The result-share popup no longer includes **Copy text + link** or **Copy link**. Custom challenge creation still keeps its dedicated challenge-link controls.
-
-## Version 16 change
-
-The result-share popup no longer includes the **Share screenshot** button. No replacement button was added.
+After deployment, create Custom patterns in more than one grid size and open the generated link in a private browser window to confirm the full friend-challenge flow.

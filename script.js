@@ -1603,7 +1603,6 @@ const startBtn = document.querySelector("#startBtn");
 const clearBtn = document.querySelector("#clearBtn");
 const checkBtn = document.querySelector("#checkBtn");
 const shareBtn = document.querySelector("#shareBtn");
-const backToNormalBtn = document.querySelector("#backToNormalBtn");
 const dailyModeBtn = document.querySelector("#dailyModeBtn");
 const journeyModeBtn = document.querySelector("#journeyModeBtn");
 const customModeBtn = document.querySelector("#customModeBtn");
@@ -1621,6 +1620,8 @@ const whatsAppShare = document.querySelector("#whatsAppShare");
 const facebookShare = document.querySelector("#facebookShare");
 const xShare = document.querySelector("#xShare");
 const emailShare = document.querySelector("#emailShare");
+const nativeImageShareBtn = document.querySelector("#nativeImageShareBtn");
+const copyLinkBtn = document.querySelector("#copyLinkBtn");
 const copyImageBtn = document.querySelector("#copyImageBtn");
 const downloadImageBtn = document.querySelector("#downloadImageBtn");
 const closeSharePanelBtn = document.querySelector("#closeSharePanelBtn");
@@ -1886,7 +1887,6 @@ function buildGrid() {
   levelInfo.textContent = currentRoundLabel(puzzle);
   customSizeControl.hidden = !isCustomBuilder();
   customSizeSelect.value = String(customBuilderSize);
-  backToNormalBtn.hidden = !(mode === "custom" && customChallengePuzzle && !customBuilderActive);
   grid.innerHTML = "";
   sizeGrid(puzzle);
 
@@ -1969,7 +1969,7 @@ function hidePattern() {
 
 function startGame() {
   if (isCustomBuilder()) {
-    void createCustomChallenge();
+    createCustomChallenge();
     return;
   }
 
@@ -2015,7 +2015,7 @@ function clearDrawing() {
   document.querySelectorAll(".cell").forEach((cell) => cell.classList.remove("selected"));
 }
 
-async function createCustomChallenge() {
+function createCustomChallenge() {
   if (!isCustomBuilder()) return;
 
   if (selected.size === 0) {
@@ -2025,48 +2025,13 @@ async function createCustomChallenge() {
 
   const code = encodeCustomPattern(selected, customBuilderSize);
   const url = customChallengeUrl(code, customBuilderSize);
-  const size = customBuilderSize;
-  currentChallengeUrl = url;
 
   trackEvent("custom_pattern_created", {
     selected_cells: selected.size,
-    grid_size: size
+    grid_size: customBuilderSize
   });
 
-  // Link sharing is reliable across more devices, so try the native sheet first.
-  // The controlled challenge popup remains the fallback for unsupported or failed shares.
-  if (typeof navigator.share !== "function" || window.location.protocol === "file:") {
-    showChallengePanel(url);
-    return;
-  }
-
-  startBtn.disabled = true;
-  startBtn.textContent = "Opening share menu...";
-
-  try {
-    await navigator.share({
-      title: "A Pixel Recall challenge for you",
-      text: customChallengeShareText(size, url),
-      url
-    });
-    message.textContent = "Challenge shared with its link. You can press the button again to share it elsewhere.";
-    trackEvent("custom_challenge_shared", {
-      custom_grid_size: size,
-      share_method: "native_first",
-      included_challenge_link: 1
-    });
-  } catch (error) {
-    if (error?.name === "AbortError") {
-      message.textContent = "Sharing cancelled. Press Create challenge link to try again.";
-    } else {
-      console.warn("Native challenge sharing failed.", error);
-      showChallengePanel(url);
-      challengePanelMessage.textContent = "The system share menu could not open. Copy the challenge link or try another option below.";
-    }
-  } finally {
-    startBtn.disabled = false;
-    startBtn.textContent = "Create challenge link";
-  }
+  showChallengePanel(url);
 }
 
 function checkAnswer() {
@@ -2423,17 +2388,19 @@ function isProbablyMobileDevice() {
   return mobileUserAgent || touchIpad;
 }
 
-function resultShareTitle() {
-  if (!lastResult) return "Pixel Recall result";
-  if (lastResult.mode === "daily") return `Pixel Recall Daily #${lastResult.dailyNumber}`;
-  if (lastResult.mode === "custom") return "My Pixel Recall challenge result";
-  return `Pixel Recall Journey · Level ${lastResult.level}`;
-}
+function canNativeShareImage(file) {
+  if (!isProbablyMobileDevice()) return false;
+  if (window.location.protocol === "file:") return false;
+  if (!window.isSecureContext) return false;
+  if (typeof navigator.share !== "function") return false;
+  if (typeof navigator.canShare !== "function") return false;
 
-function resultShareTextWithLink() {
-  return `${shareMessageText()}
-
-${canonicalShareUrl()}`;
+  try {
+    return navigator.canShare({ files: [file] });
+  } catch (error) {
+    console.warn("Native image sharing is unavailable.", error);
+    return false;
+  }
 }
 
 function clearPreviewObjectUrl() {
@@ -2469,16 +2436,16 @@ function shareMessageText() {
   const heading = lastResult.mode === "daily"
     ? `Pixel Recall Daily #${lastResult.dailyNumber}`
     : lastResult.mode === "custom"
-      ? `${lastResult.size}×${lastResult.size} Pixel Recall Friend Challenge`
+      ? "Pixel Recall Friend Challenge"
       : `Pixel Recall Journey · Level ${lastResult.level}`;
 
-  return `I scored ${lastResult.accuracy}% on ${heading}. Can you beat me?`;
+  return `${heading} — ${lastResult.accuracy}% accuracy. Can you beat me?`;
 }
 
 function configureShareLinks() {
   const url = canonicalShareUrl();
   const text = shareMessageText();
-  const combined = resultShareTextWithLink();
+  const combined = `${text}\n${url}`;
 
   whatsAppShare.href = `https://wa.me/?text=${encodeURIComponent(combined)}`;
   facebookShare.href = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`;
@@ -2499,9 +2466,17 @@ function showSharePanel(asset) {
   );
   copyImageBtn.disabled = !canCopyImage;
   copyImageBtn.textContent = canCopyImage ? "Copy image" : "Copy unavailable";
+  copyLinkBtn.textContent = "Copy link";
   downloadImageBtn.textContent = "Download image";
 
-  sharePanelMessage.textContent = "Copy or download the screenshot, then attach it manually. Social buttons share the result text and link only.";
+  const nativeAvailable = canNativeShareImage(asset.file);
+  nativeImageShareBtn.hidden = !nativeAvailable;
+  nativeImageShareBtn.disabled = false;
+  nativeImageShareBtn.textContent = "Share image";
+
+  sharePanelMessage.textContent = nativeAvailable
+    ? "Share the screenshot through your phone, share the result link, or copy and download the image."
+    : "Share the result link, or copy and download the result image.";
 
   shareModalReturnFocus = document.activeElement instanceof HTMLElement
     ? document.activeElement
@@ -2538,12 +2513,33 @@ async function shareResult() {
     }
   }
 
-  // Always open Pixel Recall's predictable result popup first.
   showSharePanel(preparedShare);
-  trackEvent("result_share_options_opened", {
-    game_mode: lastResult.mode,
-    included_challenge_link: lastResult.mode === "custom" ? 1 : 0
-  });
+}
+
+async function nativeSharePreparedImage() {
+  if (!preparedShare || !canNativeShareImage(preparedShare.file)) return;
+
+  nativeImageShareBtn.disabled = true;
+  nativeImageShareBtn.textContent = "Opening share menu...";
+
+  try {
+    await withTimeout(
+      navigator.share({ files: [preparedShare.file] }),
+      60000,
+      "System share"
+    );
+    sharePanelMessage.textContent = "Result shared.";
+  } catch (error) {
+    if (error?.name === "AbortError") {
+      sharePanelMessage.textContent = "Sharing cancelled.";
+    } else {
+      console.warn("Native image sharing failed.", error);
+      sharePanelMessage.textContent = "The phone share menu could not share the image. Use Copy image or Download image instead.";
+    }
+  } finally {
+    nativeImageShareBtn.disabled = false;
+    nativeImageShareBtn.textContent = "Share image";
+  }
 }
 
 async function copyTextToClipboard(text) {
@@ -2569,6 +2565,19 @@ async function copyTextToClipboard(text) {
   } catch (error) {
     console.warn("Fallback text copy failed.", error);
     return false;
+  }
+}
+
+async function copyShareLink() {
+  const copied = await copyTextToClipboard(canonicalShareUrl());
+  if (copied) {
+    copyLinkBtn.textContent = "Link copied";
+    sharePanelMessage.textContent = "Link copied. Paste it anywhere.";
+    setTimeout(() => {
+      copyLinkBtn.textContent = "Copy link";
+    }, 2200);
+  } else {
+    sharePanelMessage.textContent = "The browser blocked link copying. Select the address from the browser bar instead.";
   }
 }
 
@@ -2606,12 +2615,6 @@ function downloadPreparedImage() {
 function syncModalBodyLock() {
   const modalOpen = (shareModal && !shareModal.hidden) || (challengeModal && !challengeModal.hidden);
   document.body.classList.toggle("share-modal-open", Boolean(modalOpen));
-}
-
-function customChallengeShareText(size, url) {
-  return `I made you a ${size}×${size} Pixel Recall memory challenge. Memorize the pattern, redraw it, and send me your score!
-
-${url}`;
 }
 
 function showChallengePanel(url) {
@@ -2671,21 +2674,12 @@ async function shareCustomChallengeLink() {
   shareChallengeLinkBtn.disabled = true;
   shareChallengeLinkBtn.textContent = "Opening share menu...";
   try {
-    const size = customBuilderSize;
-
     await navigator.share({
-      title: "A Pixel Recall challenge for you",
-      text: customChallengeShareText(size, currentChallengeUrl),
-      // The URL is also included in the visible text so it is not lost by apps
-      // that handle Web Share fields differently.
+      title: "Pixel Recall friend challenge",
+      text: "I made a Pixel Recall pattern for you. Can you redraw it from memory?",
       url: currentChallengeUrl
     });
-    challengePanelMessage.textContent = "Challenge shared with its link.";
-    trackEvent("custom_challenge_shared", {
-      custom_grid_size: size,
-      share_method: "native",
-      included_challenge_link: 1
-    });
+    challengePanelMessage.textContent = "Challenge shared.";
   } catch (error) {
     if (error?.name !== "AbortError") {
       console.warn("Challenge sharing failed.", error);
@@ -2707,39 +2701,8 @@ function activeModalState() {
   return null;
 }
 
-function clearAcceptedChallenge() {
-  if (!customChallengePuzzle) return;
-
-  customChallengeCode = null;
-  customChallengeSize = null;
-  customChallengePuzzle = null;
-  customBuilderActive = true;
-  currentChallengeUrl = "";
-
-  if (window.location.protocol === "http:" || window.location.protocol === "https:") {
-    window.history.replaceState({}, "", publicGameUrl());
-  }
-}
-
-function returnToNormalPixelRecall() {
-  trackEvent("custom_challenge_exit", {
-    destination: "daily",
-    exit_method: "back_button"
-  });
-
-  window.location.assign(publicGameUrl().toString());
-}
-
 function setMode(nextMode) {
   if (nextMode === mode) return;
-
-  if (customChallengePuzzle && nextMode !== "custom") {
-    trackEvent("custom_challenge_exit", {
-      destination: nextMode,
-      exit_method: "mode_switch"
-    });
-    clearAcceptedChallenge();
-  }
 
   mode = nextMode;
   if (mode === "custom") {
@@ -2777,7 +2740,8 @@ startBtn.addEventListener("click", startGame);
 clearBtn.addEventListener("click", clearDrawing);
 checkBtn.addEventListener("click", checkAnswer);
 shareBtn.addEventListener("click", shareResult);
-backToNormalBtn.addEventListener("click", returnToNormalPixelRecall);
+nativeImageShareBtn.addEventListener("click", nativeSharePreparedImage);
+copyLinkBtn.addEventListener("click", copyShareLink);
 copyImageBtn.addEventListener("click", copyPreparedImage);
 downloadImageBtn.addEventListener("click", downloadPreparedImage);
 closeSharePanelBtn.addEventListener("click", hideSharePanel);
@@ -2841,7 +2805,7 @@ scaleResetBtn.addEventListener("click", () => applyUiScale(1));
 scaleUpBtn.addEventListener("click", () => applyUiScale(uiScale + UI_SCALE_STEP));
 window.addEventListener("resize", () => sizeGrid(currentPuzzle()));
 
-console.info("Pixel Recall build: v13-challenge-exit");
+console.info("Pixel Recall build: v11-custom-grid-size");
 applyUiScale(uiScale, false);
 updateModeButtons();
 buildGrid();
