@@ -42,4 +42,4 @@ The score table stores one official first attempt per anonymous browser ID per D
 ## v21 fix
 
 - Fixed score distribution bar fills by making the track and fill spans block-level elements.
-- Updated cache-busting query strings in `index.html` so browsers load the fixed CSS.
+- Updated cache-busting query strings in `index.html` so browsers load the fixed CSS...
