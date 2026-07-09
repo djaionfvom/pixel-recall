@@ -1,26 +1,39 @@
-# Pixel Recall — v8 clean and analytics update
+# Pixel Recall v20 — first-attempt Daily stats
 
-This build adds the first retention and measurement improvements based on player feedback.
+This build starts from the streak + community distribution version and adds first-attempt enforcement for Daily stats:
 
-## Changes
+- Local Daily streak after completing the Daily puzzle
+- Only the first completed Daily attempt per anonymous browser/user counts in stats
+- Daily replays are treated as practice only
+- Best streak saved in `localStorage`
+- Daily community score distribution across users
+- Percentile-style message: “You beat X% of today’s players”
+- Backend-ready Supabase setup with first-attempt-only official scores
+- Share text can include streak/percentile when available
+- Custom/friend challenge sharing behavior from v18 is preserved
 
-- Fixes iOS page scrolling from the grid before and after the drawing phase.
-- Keeps touch drawing locked to the grid while a puzzle is actively being redrawn.
-- Sends `game_started` and `game_completed` events to GA4.
-- Includes mode, accuracy, pixel counts, puzzle name, daily number, Journey level, and pass state in analytics.
-- Displays the Daily personal best after a result.
-- Adds a local Daily streak stored in the browser.
-- Adds search metadata, canonical URL, Open Graph tags, and X/Twitter card tags.
-- Adds an `og-image.png` social preview image.
-- Updates asset cache versions to `v8-retention`.
+## Backend
 
-## Deploy to GitHub Pages
+The backend is prepared but not deployed from this ZIP. To connect it:
 
-Upload the contents of this folder to the repository root. Keep `index.html`, `style.css`, `script.js`, `icon.svg`, `og-image.png`, `CNAME`, `robots.txt`, and `sitemap.xml` at the root level.
+1. Create a Supabase project.
+2. Run `backend/supabase-schema.sql` in Supabase SQL Editor.
+3. Open `backend-config.js` and paste your Supabase Project URL and anon public key.
+4. Deploy the whole folder to GitHub Pages.
 
-After deployment, test analytics in GA4 Realtime by pressing **Start**, finishing a puzzle, and pressing **Check**. Look for `game_started` and `game_completed`.
+If you already ran the v19 SQL, run the v20 SQL as well. It replaces the submit function so future replays no longer overwrite the first official attempt.
 
-## Share-result popup
+Without backend keys, the game still works. Streaks are local-only and community stats show a setup message.
 
-The Share result controls now open in a centered modal window instead of appearing below the game. The modal locks background scrolling, remains scrollable on small screens, and closes with the close button, Escape key, or a click/tap outside the window.
+## Files
 
+- `index.html` — app markup and new Daily progress panel
+- `script.js` — game logic, local streaks, Supabase calls, distribution rendering
+- `style.css` — existing design plus Daily progress panel styles
+- `backend-config.js` — frontend backend keys placeholder
+- `backend/supabase-schema.sql` — database table + RPC setup
+- `backend/README.md` — setup instructions
+
+## Notes
+
+The score table stores one official first attempt per anonymous browser ID per Daily puzzle. Replays are practice only and do not update the community distribution. There is no login, email, or account system.

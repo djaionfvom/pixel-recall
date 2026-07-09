@@ -1605,6 +1605,9 @@ const checkBtn = document.querySelector("#checkBtn");
 const shareBtn = document.querySelector("#shareBtn");
 const dailyModeBtn = document.querySelector("#dailyModeBtn");
 const journeyModeBtn = document.querySelector("#journeyModeBtn");
+const customModeBtn = document.querySelector("#customModeBtn");
+const customSizeControl = document.querySelector("#customSizeControl");
+const customSizeSelect = document.querySelector("#customSizeSelect");
 const message = document.querySelector("#message");
 const puzzleName = document.querySelector("#puzzleName");
 const levelInfo = document.querySelector("#levelInfo");
@@ -1622,14 +1625,69 @@ const copyLinkBtn = document.querySelector("#copyLinkBtn");
 const copyImageBtn = document.querySelector("#copyImageBtn");
 const downloadImageBtn = document.querySelector("#downloadImageBtn");
 const closeSharePanelBtn = document.querySelector("#closeSharePanelBtn");
+const challengeModal = document.querySelector("#challengeModal");
+const challengePanel = document.querySelector("#challengePanel");
+const challengePanelMessage = document.querySelector("#challengePanelMessage");
+const challengeLinkInput = document.querySelector("#challengeLinkInput");
+const copyChallengeLinkBtn = document.querySelector("#copyChallengeLinkBtn");
+const shareChallengeLinkBtn = document.querySelector("#shareChallengeLinkBtn");
+const challengeWhatsAppShare = document.querySelector("#challengeWhatsAppShare");
+const challengeXShare = document.querySelector("#challengeXShare");
+const challengeEmailShare = document.querySelector("#challengeEmailShare");
+const openChallengeLink = document.querySelector("#openChallengeLink");
+const closeChallengePanelBtn = document.querySelector("#closeChallengePanelBtn");
 const scaleDownBtn = document.querySelector("#scaleDownBtn");
 const scaleResetBtn = document.querySelector("#scaleResetBtn");
 const scaleUpBtn = document.querySelector("#scaleUpBtn");
+const dailyProgressPanel = document.querySelector("#dailyProgressPanel");
+const dailyStreakText = document.querySelector("#dailyStreakText");
+const dailyReturnText = document.querySelector("#dailyReturnText");
+const dailyCommunityPanel = document.querySelector("#dailyCommunityPanel");
+const dailyCommunityHeadline = document.querySelector("#dailyCommunityHeadline");
+const dailyDistributionBars = document.querySelector("#dailyDistributionBars");
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const DAILY_EPOCH = Date.UTC(2026, 0, 1);
+const CUSTOM_DEFAULT_SIZE = 8;
+const CUSTOM_MIN_SIZE = 5;
+const CUSTOM_MAX_SIZE = 12;
+const CUSTOM_PREVIEW_TIME = 2300;
+const CUSTOM_SIZE_STORAGE_KEY = "pixelRecallCustomGridSize";
+const DAILY_STREAK_STORAGE_KEY = "pixelRecallDailyStreakV1";
+const ANONYMOUS_USER_STORAGE_KEY = "pixelRecallAnonymousUserIdV1";
+const DAILY_DISTRIBUTION_BUCKETS = [
+  { label: "0–49%", min: 0, max: 49 },
+  { label: "50–69%", min: 50, max: 69 },
+  { label: "70–89%", min: 70, max: 89 },
+  { label: "90–100%", min: 90, max: 100 }
+];
+const BACKEND_CONFIG = window.PIXEL_RECALL_BACKEND || {};
+const SUPABASE_URL = (BACKEND_CONFIG.SUPABASE_URL || "").replace(/\/$/, "");
+const SUPABASE_ANON_KEY = BACKEND_CONFIG.SUPABASE_ANON_KEY || "";
 
-let mode = "daily";
+function parseCustomGridSize(value, fallback = CUSTOM_DEFAULT_SIZE) {
+  const parsed = Number.parseInt(value, 10);
+  return Number.isInteger(parsed) && parsed >= CUSTOM_MIN_SIZE && parsed <= CUSTOM_MAX_SIZE
+    ? parsed
+    : fallback;
+}
+
+const initialCustomParams = new URLSearchParams(window.location.search);
+const initialCustomCode = initialCustomParams.get("challenge");
+const initialCustomSize = parseCustomGridSize(initialCustomParams.get("size"));
+let customChallengeCode = isValidCustomPatternCode(initialCustomCode, initialCustomSize)
+  ? initialCustomCode.toLowerCase()
+  : null;
+let customChallengeSize = customChallengeCode ? initialCustomSize : null;
+let customChallengePuzzle = customChallengeCode
+  ? customPuzzleFromCode(customChallengeCode, customChallengeSize)
+  : null;
+let customBuilderSize = parseCustomGridSize(localStorage.getItem(CUSTOM_SIZE_STORAGE_KEY));
+let customBuilderActive = !customChallengePuzzle;
+let currentChallengeUrl = "";
+let challengeModalReturnFocus = null;
+
+let mode = customChallengePuzzle ? "custom" : "daily";
 const JOURNEY_RUN_KEY = "pixelRecallJourneyRunLevelV2";
 const storedLevel = Number(localStorage.getItem(JOURNEY_RUN_KEY));
 let level = Number.isFinite(storedLevel)
@@ -1687,6 +1745,385 @@ function trackEvent(name, parameters = {}) {
   window.gtag("event", name, parameters);
 }
 
+function backendEnabled() {
+  return /^https:\/\//.test(SUPABASE_URL) && SUPABASE_ANON_KEY.length > 20;
+}
+
+function getAnonymousUserId() {
+  const existing = localStorage.getItem(ANONYMOUS_USER_STORAGE_KEY);
+  if (existing) return existing;
+
+  const generated = globalThis.crypto?.randomUUID
+    ? globalThis.crypto.randomUUID()
+    : `anon-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  localStorage.setItem(ANONYMOUS_USER_STORAGE_KEY, generated);
+  return generated;
+}
+
+function safeJsonParse(value, fallback) {
+  try {
+    return value ? JSON.parse(value) : fallback;
+  } catch (error) {
+    return fallback;
+  }
+}
+
+function getDailyStreakState() {
+  const state = safeJsonParse(localStorage.getItem(DAILY_STREAK_STORAGE_KEY), null) || {};
+  return {
+    lastDailyNumber: Number(state.lastDailyNumber) || 0,
+    currentStreak: Number(state.currentStreak) || 0,
+    bestStreak: Number(state.bestStreak) || 0
+  };
+}
+
+function updateDailyStreak(dailyNumber) {
+  const state = getDailyStreakState();
+
+  if (state.lastDailyNumber === dailyNumber) {
+    return state;
+  }
+
+  const nextCurrent = state.lastDailyNumber === dailyNumber - 1
+    ? state.currentStreak + 1
+    : 1;
+
+  const nextState = {
+    lastDailyNumber: dailyNumber,
+    currentStreak: nextCurrent,
+    bestStreak: Math.max(state.bestStreak, nextCurrent)
+  };
+
+  localStorage.setItem(DAILY_STREAK_STORAGE_KEY, JSON.stringify(nextState));
+  return nextState;
+}
+
+function formatStreakLabel(streak) {
+  const dayWord = streak === 1 ? "day" : "days";
+  return `🔥 ${streak}-${dayWord} streak`;
+}
+
+function nextDailyNumber(dailyNumber) {
+  return dailyNumber + 1;
+}
+
+function updateDailyProgressPanel({ dailyNumber, accuracy, streakState, backendStatus = "loading", stats = null, submission = null }) {
+  if (!dailyProgressPanel) return;
+
+  dailyProgressPanel.hidden = false;
+  dailyStreakText.textContent = formatStreakLabel(streakState.currentStreak);
+  dailyReturnText.textContent = `Best: ${streakState.bestStreak} · Come back tomorrow for Daily #${nextDailyNumber(dailyNumber)}.`;
+
+  if (!dailyCommunityPanel) return;
+  dailyCommunityPanel.hidden = false;
+
+  if (!backendEnabled()) {
+    dailyCommunityHeadline.textContent = "Community stats are ready, but the backend keys are not connected yet.";
+    dailyDistributionBars.innerHTML = "";
+    return;
+  }
+
+  if (backendStatus === "loading") {
+    dailyCommunityHeadline.textContent = "Loading today’s score distribution…";
+    dailyDistributionBars.innerHTML = "";
+    return;
+  }
+
+  if (backendStatus === "error") {
+    dailyCommunityHeadline.textContent = "Could not load today’s community scores yet.";
+    dailyDistributionBars.innerHTML = "";
+    return;
+  }
+
+  if (!stats || stats.total === 0) {
+    dailyCommunityHeadline.textContent = "You may be the first player in today’s distribution.";
+    dailyDistributionBars.innerHTML = "";
+    return;
+  }
+
+  const officialAccuracy = Number(submission?.officialAccuracy);
+  const hasOfficialAccuracy = Number.isFinite(officialAccuracy);
+
+  if (submission?.alreadySubmitted) {
+    const officialText = hasOfficialAccuracy ? ` Your first official score was ${officialAccuracy}%.` : "";
+    if (typeof stats.beatPercent === "number") {
+      dailyCommunityHeadline.textContent = `Practice replay.${officialText} That official score beat ${stats.beatPercent}% of ${stats.total} players today.`;
+    } else {
+      dailyCommunityHeadline.textContent = `Practice replay.${officialText} First attempts only count in today’s distribution.`;
+    }
+  } else if (stats.total === 1) {
+    dailyCommunityHeadline.textContent = "Official result submitted. First score in today’s distribution.";
+  } else if (typeof stats.beatPercent === "number") {
+    dailyCommunityHeadline.textContent = `Official result submitted. You beat ${stats.beatPercent}% of ${stats.total} players today.`;
+  } else {
+    dailyCommunityHeadline.textContent = `${stats.total} players submitted a Daily score today.`;
+  }
+
+  renderDailyDistribution(stats.bucketCounts, stats.total);
+}
+
+function renderDailyDistribution(bucketCounts, total) {
+  dailyDistributionBars.innerHTML = "";
+  DAILY_DISTRIBUTION_BUCKETS.forEach((bucket) => {
+    const count = bucketCounts[bucket.label] || 0;
+    const percent = total > 0 ? Math.round((count / total) * 100) : 0;
+    const row = document.createElement("div");
+    row.className = "daily-distribution-row";
+    row.innerHTML = `
+      <span>${bucket.label}</span>
+      <span class="daily-distribution-track" aria-hidden="true"><span class="daily-distribution-fill" style="width: ${percent}%"></span></span>
+      <span>${count}</span>
+    `;
+    dailyDistributionBars.appendChild(row);
+  });
+}
+
+function bucketScores(scores) {
+  const bucketCounts = Object.fromEntries(DAILY_DISTRIBUTION_BUCKETS.map((bucket) => [bucket.label, 0]));
+  scores.forEach((score) => {
+    const bucket = DAILY_DISTRIBUTION_BUCKETS.find((candidate) => score >= candidate.min && score <= candidate.max);
+    if (bucket) bucketCounts[bucket.label] += 1;
+  });
+  return bucketCounts;
+}
+
+function calculateDailyStats(scores, accuracy) {
+  const cleanScores = scores
+    .map((score) => Number(score))
+    .filter((score) => Number.isFinite(score) && score >= 0 && score <= 100);
+
+  const total = cleanScores.length;
+  const lowerScores = cleanScores.filter((score) => score < accuracy).length;
+  const beatPercent = total > 1 ? Math.round((lowerScores / total) * 100) : null;
+
+  return {
+    total,
+    beatPercent,
+    bucketCounts: bucketScores(cleanScores)
+  };
+}
+
+function supabaseHeaders(extra = {}) {
+  return {
+    apikey: SUPABASE_ANON_KEY,
+    Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+    "Content-Type": "application/json",
+    ...extra
+  };
+}
+
+async function submitDailyScore(result) {
+  if (!backendEnabled()) return null;
+
+  const payload = {
+    p_daily_number: result.dailyNumber,
+    p_puzzle_name: result.puzzleName,
+    p_accuracy: result.accuracy,
+    p_correct_cells: result.correct,
+    p_missed_cells: result.missed,
+    p_extra_cells: result.extra,
+    p_grid_size: result.size,
+    p_anonymous_user_id: getAnonymousUserId(),
+    p_device_type: isProbablyMobileDevice() ? "mobile" : "desktop"
+  };
+
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/rpc/submit_daily_score`, {
+    method: "POST",
+    headers: supabaseHeaders({ Prefer: "return=representation" }),
+    body: JSON.stringify(payload)
+  });
+
+  if (!response.ok) throw new Error(`Daily score submit failed: ${response.status}`);
+
+  const rows = await response.json();
+  const row = Array.isArray(rows) ? rows[0] : rows;
+
+  return {
+    accepted: row?.accepted === true,
+    alreadySubmitted: row?.already_submitted === true,
+    officialAccuracy: Number.isFinite(Number(row?.official_accuracy)) ? Number(row.official_accuracy) : result.accuracy,
+    officialCreatedAt: row?.official_created_at || null
+  };
+}
+
+async function fetchDailyScores(dailyNumber) {
+  if (!backendEnabled()) return [];
+
+  const url = `${SUPABASE_URL}/rest/v1/daily_scores?select=accuracy&daily_number=eq.${encodeURIComponent(dailyNumber)}`;
+  const response = await fetch(url, {
+    headers: supabaseHeaders()
+  });
+
+  if (!response.ok) throw new Error(`Daily score fetch failed: ${response.status}`);
+  const rows = await response.json();
+  return rows.map((row) => row.accuracy);
+}
+
+async function handleDailyCompletion(result) {
+  const streakState = updateDailyStreak(result.dailyNumber);
+  result.dailyStreak = streakState.currentStreak;
+  result.dailyBestStreak = streakState.bestStreak;
+
+  updateDailyProgressPanel({
+    dailyNumber: result.dailyNumber,
+    accuracy: result.accuracy,
+    streakState,
+    backendStatus: backendEnabled() ? "loading" : "disabled"
+  });
+
+  if (!backendEnabled()) return;
+
+  try {
+    const submission = await submitDailyScore(result);
+    const officialAccuracy = Number.isFinite(Number(submission?.officialAccuracy))
+      ? Number(submission.officialAccuracy)
+      : result.accuracy;
+    const scores = await fetchDailyScores(result.dailyNumber);
+    const stats = calculateDailyStats(scores, officialAccuracy);
+
+    result.dailyOfficialScoreAccepted = submission?.accepted === true;
+    result.dailyIsPracticeReplay = submission?.alreadySubmitted === true;
+    result.dailyOfficialAccuracy = officialAccuracy;
+    result.dailyPlayerCount = stats.total;
+    result.dailyBeatPercent = stats.beatPercent;
+
+    updateDailyProgressPanel({
+      dailyNumber: result.dailyNumber,
+      accuracy: result.accuracy,
+      streakState,
+      backendStatus: "loaded",
+      stats,
+      submission
+    });
+  } catch (error) {
+    console.warn("Daily backend stats are unavailable.", error);
+    updateDailyProgressPanel({
+      dailyNumber: result.dailyNumber,
+      accuracy: result.accuracy,
+      streakState,
+      backendStatus: "error"
+    });
+  }
+}
+
+
+function expectedCustomCodeLength(size) {
+  return Math.ceil((size * size) / 4);
+}
+
+function isValidCustomPatternCode(code, size = CUSTOM_DEFAULT_SIZE) {
+  if (typeof code !== "string") return false;
+  const expectedLength = expectedCustomCodeLength(size);
+  const pattern = new RegExp(`^[0-9a-f]{${expectedLength}}$`, "i");
+  return pattern.test(code) && !new RegExp(`^0{${expectedLength}}$`, "i").test(code);
+}
+
+function encodeCustomPattern(cells, size) {
+  const totalCells = size * size;
+  const groups = expectedCustomCodeLength(size);
+  let code = "";
+
+  for (let group = 0; group < groups; group++) {
+    let value = 0;
+    for (let bit = 0; bit < 4; bit++) {
+      const index = group * 4 + bit;
+      if (index < totalCells && cells.has(index)) value |= 1 << (3 - bit);
+    }
+    code += value.toString(16);
+  }
+  return code;
+}
+
+function decodeCustomPattern(code, size) {
+  if (!isValidCustomPatternCode(code, size)) return [];
+
+  const totalCells = size * size;
+  const cells = [];
+  [...code.toLowerCase()].forEach((character, group) => {
+    const value = Number.parseInt(character, 16);
+    for (let bit = 0; bit < 4; bit++) {
+      const index = group * 4 + bit;
+      if (index < totalCells && value & (1 << (3 - bit))) cells.push(index);
+    }
+  });
+  return cells;
+}
+
+function customPuzzleFromCode(code, size) {
+  return {
+    name: "Custom Pattern",
+    size,
+    time: CUSTOM_PREVIEW_TIME,
+    cells: decodeCustomPattern(code, size)
+  };
+}
+
+function isCustomBuilder() {
+  return mode === "custom" && customBuilderActive;
+}
+
+function publicGameUrl() {
+  if (window.location.protocol === "http:" || window.location.protocol === "https:") {
+    const url = new URL(window.location.href);
+    url.search = "";
+    url.hash = "";
+    return url;
+  }
+
+  return new URL("https://pixelrecall.net/");
+}
+
+function customChallengeUrl(code, size = CUSTOM_DEFAULT_SIZE) {
+  const url = publicGameUrl();
+  url.searchParams.set("challenge", code);
+  url.searchParams.set("size", String(size));
+  return url.toString();
+}
+
+function isProbablyMobileDevice() {
+  if (typeof navigator.userAgentData?.mobile === "boolean") {
+    return navigator.userAgentData.mobile;
+  }
+
+  const userAgent = navigator.userAgent || "";
+  const isMobileUserAgent = /Android|iPhone|iPad|iPod|Mobile|Tablet/i.test(userAgent);
+  const isIPadDesktopMode = navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1;
+  return isMobileUserAgent || isIPadDesktopMode;
+}
+
+function canUseNativeChallengeShare() {
+  return (
+    window.isSecureContext &&
+    isProbablyMobileDevice() &&
+    typeof navigator.share === "function"
+  );
+}
+
+function challengeGridSizeFromUrl(urlString) {
+  try {
+    const url = new URL(urlString);
+    return parseCustomGridSize(url.searchParams.get("size"), customBuilderSize);
+  } catch (error) {
+    return customBuilderSize;
+  }
+}
+
+function customChallengeShareText() {
+  const size = challengeGridSizeFromUrl(currentChallengeUrl);
+  return `I made you a ${size}×${size} Pixel Recall memory challenge. Can you redraw it from memory?`;
+}
+
+function configureCustomChallengeLinks() {
+  if (!currentChallengeUrl) return;
+
+  const text = customChallengeShareText();
+  const combined = `${text}\n\n${currentChallengeUrl}`;
+
+  challengeWhatsAppShare.href = `https://wa.me/?text=${encodeURIComponent(combined)}`;
+  challengeXShare.href = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(currentChallengeUrl)}`;
+  challengeEmailShare.href = `mailto:?subject=${encodeURIComponent("Pixel Recall friend challenge")}&body=${encodeURIComponent(combined)}`;
+}
+
 function dailyInfo() {
   const dayOffset = Math.floor((utcDayStart() - DAILY_EPOCH) / DAY_MS);
   const dailyNumber = Math.max(1, dayOffset + 1);
@@ -1698,6 +2135,19 @@ function currentPuzzle() {
   if (mode === "daily") {
     return dailyPuzzles[dailyInfo().puzzleIndex];
   }
+
+  if (mode === "custom") {
+    if (isCustomBuilder()) {
+      return {
+        name: "Your Pattern",
+        size: customBuilderSize,
+        time: CUSTOM_PREVIEW_TIME,
+        cells: []
+      };
+    }
+    return customChallengePuzzle;
+  }
+
   return puzzles[Math.min(level, puzzles.length - 1)];
 }
 
@@ -1706,14 +2156,18 @@ function currentRoundLabel(puzzle) {
     return `Daily #${dailyInfo().dailyNumber}`;
   }
 
+  if (mode === "custom") {
+    return isCustomBuilder() ? "Create a custom challenge" : "Friend challenge";
+  }
+
   const checkpoint = Math.floor(level / 10) * 10 + 1;
   return `Level ${level + 1} · Best ${journeyHighScore} · Restart ${checkpoint}`;
 }
 
 function updateModeButtons() {
-  const dailyActive = mode === "daily";
-  dailyModeBtn.setAttribute("aria-pressed", String(dailyActive));
-  journeyModeBtn.setAttribute("aria-pressed", String(!dailyActive));
+  dailyModeBtn.setAttribute("aria-pressed", String(mode === "daily"));
+  journeyModeBtn.setAttribute("aria-pressed", String(mode === "journey"));
+  customModeBtn.setAttribute("aria-pressed", String(mode === "custom"));
 }
 
 function sizeGrid(puzzle) {
@@ -1728,9 +2182,12 @@ function sizeGrid(puzzle) {
 }
 
 function resetButtons() {
+  startBtn.hidden = false;
   startBtn.disabled = false;
   startBtn.textContent = "Start";
+  clearBtn.hidden = false;
   clearBtn.disabled = true;
+  checkBtn.hidden = false;
   checkBtn.disabled = true;
   shareBtn.disabled = true;
   shareBtn.textContent = "Share result";
@@ -1750,10 +2207,13 @@ function buildGrid() {
   preparedShare = null;
   sharePreparationPromise = null;
   hideSharePanel();
+  if (dailyProgressPanel) dailyProgressPanel.hidden = true;
   scoreBox.textContent = "—";
   puzzleName.textContent = puzzle.name;
   puzzleName.hidden = mode === "daily";
   levelInfo.textContent = currentRoundLabel(puzzle);
+  customSizeControl.hidden = !isCustomBuilder();
+  customSizeSelect.value = String(customBuilderSize);
   grid.innerHTML = "";
   sizeGrid(puzzle);
 
@@ -1793,7 +2253,21 @@ function buildGrid() {
   }
 
   resetButtons();
-  message.textContent = "Press Start and memorize the pattern.";
+
+  if (isCustomBuilder()) {
+    canDraw = true;
+    grid.classList.add("drawing-active");
+    startBtn.textContent = "Create challenge link";
+    clearBtn.disabled = false;
+    checkBtn.hidden = true;
+    puzzleName.hidden = false;
+    message.textContent = `Draw a ${customBuilderSize}×${customBuilderSize} pattern for your friend, then create a challenge link.`;
+    return;
+  }
+
+  message.textContent = mode === "custom"
+    ? "Press Start to memorize your friend's pattern."
+    : "Press Start and memorize the pattern.";
 }
 
 function showPattern() {
@@ -1821,12 +2295,19 @@ function hidePattern() {
 }
 
 function startGame() {
+  if (isCustomBuilder()) {
+    createCustomChallenge();
+    return;
+  }
+
   buildGrid();
 
   trackEvent("game_started", {
     game_mode: mode,
     daily_number: mode === "daily" ? dailyInfo().dailyNumber : 0,
-    journey_level: mode === "journey" ? level + 1 : 0
+    journey_level: mode === "journey" ? level + 1 : 0,
+    custom_pattern_cells: mode === "custom" ? currentPuzzle().cells.length : 0,
+    custom_grid_size: mode === "custom" ? currentPuzzle().size : 0
   });
 
   startBtn.disabled = true;
@@ -1859,6 +2340,25 @@ function clearDrawing() {
   if (!canDraw) return;
   selected.clear();
   document.querySelectorAll(".cell").forEach((cell) => cell.classList.remove("selected"));
+}
+
+function createCustomChallenge() {
+  if (!isCustomBuilder()) return;
+
+  if (selected.size === 0) {
+    message.textContent = "Draw at least one square before creating the challenge.";
+    return;
+  }
+
+  const code = encodeCustomPattern(selected, customBuilderSize);
+  const url = customChallengeUrl(code, customBuilderSize);
+
+  trackEvent("custom_pattern_created", {
+    selected_cells: selected.size,
+    grid_size: customBuilderSize
+  });
+
+  showChallengePanel(url);
 }
 
 function checkAnswer() {
@@ -1898,6 +2398,8 @@ function checkAnswer() {
     puzzle_name: puzzle.name,
     daily_number: resultMode === "daily" ? resultDailyNumber : 0,
     journey_level: resultMode === "journey" ? resultLevel : 0,
+    custom_pattern_cells: resultMode === "custom" ? puzzle.cells.length : 0,
+    custom_grid_size: resultMode === "custom" ? puzzle.size : 0,
     passed: resultMode === "journey" && accuracy >= PASS_SCORE ? 1 : 0
   });
 
@@ -1939,6 +2441,9 @@ function checkAnswer() {
     const bestKey = `pixelRecallDailyBest-${resultDailyNumber}`;
     const previousBest = Number(localStorage.getItem(bestKey)) || 0;
     if (accuracy > previousBest) localStorage.setItem(bestKey, String(accuracy));
+    handleDailyCompletion(lastResult);
+  } else if (resultMode === "custom") {
+    startBtn.textContent = "Try Again";
   } else {
     journeyHighScore = Math.max(journeyHighScore, resultLevel);
 
@@ -2035,7 +2540,9 @@ async function createResultImageBlob() {
 
   const roundHeading = lastResult.mode === "daily"
     ? `Daily #${lastResult.dailyNumber}`
-    : `Journey · Level ${lastResult.level}`;
+    : lastResult.mode === "custom"
+      ? "Friend Challenge"
+      : `Journey · Level ${lastResult.level}`;
 
   ctx.fillStyle = "#f7f7fb";
   ctx.font = "800 52px Inter, system-ui, sans-serif";
@@ -2108,9 +2615,11 @@ async function createResultImageBlob() {
 
   ctx.fillStyle = "#9aa3c7";
   ctx.font = "600 25px Inter, system-ui, sans-serif";
-  const siteAddress = window.location.protocol.startsWith("http")
-    ? window.location.href.replace(/\/$/, "")
-    : "Pixel Recall";
+  const siteAddress = lastResult.mode === "custom"
+    ? "pixelrecall.net · Custom challenge"
+    : window.location.protocol.startsWith("http")
+      ? window.location.href.replace(/\/$/, "")
+      : "Pixel Recall";
   ctx.fillText(siteAddress, 110, 1250);
 
   return canvasToPngBlob(canvas);
@@ -2160,7 +2669,9 @@ function filenameForResult() {
   if (!lastResult) return "pixel-recall-result.png";
   const roundName = lastResult.mode === "daily"
     ? `daily-${lastResult.dailyNumber}`
-    : `journey-level-${lastResult.level}`;
+    : lastResult.mode === "custom"
+      ? "friend-challenge"
+      : `journey-level-${lastResult.level}`;
   return `pixel-recall-${roundName}.png`;
 }
 
@@ -2230,7 +2741,7 @@ function hideSharePanel() {
   if (!shareModal || shareModal.hidden) return;
 
   shareModal.hidden = true;
-  document.body.classList.remove("share-modal-open");
+  syncModalBodyLock();
   clearPreviewObjectUrl();
   resultPreview.removeAttribute("src");
 
@@ -2240,14 +2751,11 @@ function hideSharePanel() {
 }
 
 function canonicalShareUrl() {
-  if (window.location.protocol === "http:" || window.location.protocol === "https:") {
-    const url = new URL(window.location.href);
-    url.search = "";
-    url.hash = "";
-    return url.toString();
+  if (lastResult?.mode === "custom" && customChallengeCode) {
+    return customChallengeUrl(customChallengeCode, customChallengeSize || lastResult.size);
   }
 
-  return "https://pixelrecall.net/";
+  return publicGameUrl().toString();
 }
 
 function shareMessageText() {
@@ -2255,7 +2763,21 @@ function shareMessageText() {
 
   const heading = lastResult.mode === "daily"
     ? `Pixel Recall Daily #${lastResult.dailyNumber}`
-    : `Pixel Recall Journey · Level ${lastResult.level}`;
+    : lastResult.mode === "custom"
+      ? "Pixel Recall Friend Challenge"
+      : `Pixel Recall Journey · Level ${lastResult.level}`;
+
+  if (lastResult.mode === "daily" && lastResult.dailyIsPracticeReplay && typeof lastResult.dailyOfficialAccuracy === "number") {
+    return `${heading} — ${lastResult.accuracy}% accuracy on a practice replay. My official first attempt was ${lastResult.dailyOfficialAccuracy}%. Can you beat me?`;
+  }
+
+  if (lastResult.mode === "daily" && typeof lastResult.dailyBeatPercent === "number") {
+    return `${heading} — ${lastResult.accuracy}% accuracy · beat ${lastResult.dailyBeatPercent}% of today's players. Can you beat me?`;
+  }
+
+  if (lastResult.mode === "daily" && typeof lastResult.dailyStreak === "number") {
+    return `${heading} — ${lastResult.accuracy}% accuracy · ${lastResult.dailyStreak}-day streak. Can you beat me?`;
+  }
 
   return `${heading} — ${lastResult.accuracy}% accuracy. Can you beat me?`;
 }
@@ -2301,7 +2823,7 @@ function showSharePanel(asset) {
     : shareBtn;
 
   shareModal.hidden = false;
-  document.body.classList.add("share-modal-open");
+  syncModalBodyLock();
   sharePanel.scrollTop = 0;
   requestAnimationFrame(() => closeSharePanelBtn.focus());
 }
@@ -2430,9 +2952,110 @@ function downloadPreparedImage() {
   }, 2200);
 }
 
+function syncModalBodyLock() {
+  const modalOpen = (shareModal && !shareModal.hidden) || (challengeModal && !challengeModal.hidden);
+  document.body.classList.toggle("share-modal-open", Boolean(modalOpen));
+}
+
+function showChallengePanel(url) {
+  currentChallengeUrl = url;
+  challengeLinkInput.value = url;
+  openChallengeLink.href = url;
+  copyChallengeLinkBtn.textContent = "Copy challenge link";
+
+  const nativeShareAvailable = canUseNativeChallengeShare();
+  shareChallengeLinkBtn.hidden = !nativeShareAvailable;
+  shareChallengeLinkBtn.textContent = "Share challenge";
+
+  configureCustomChallengeLinks();
+  challengePanelMessage.textContent = nativeShareAvailable
+    ? "Share the challenge from your device, copy its link, or send it with one of the options below."
+    : "Copy the challenge link or send it with WhatsApp, X, or Email. The pattern is stored inside the link.";
+
+  challengeModalReturnFocus = document.activeElement instanceof HTMLElement
+    ? document.activeElement
+    : startBtn;
+
+  challengeModal.hidden = false;
+  syncModalBodyLock();
+  challengePanel.scrollTop = 0;
+  requestAnimationFrame(() => closeChallengePanelBtn.focus());
+}
+
+function hideChallengePanel() {
+  if (!challengeModal || challengeModal.hidden) return;
+
+  challengeModal.hidden = true;
+  syncModalBodyLock();
+
+  const focusTarget = challengeModalReturnFocus;
+  challengeModalReturnFocus = null;
+  if (focusTarget?.isConnected) focusTarget.focus();
+}
+
+async function copyCustomChallengeLink() {
+  if (!currentChallengeUrl) return;
+
+  const copied = await copyTextToClipboard(currentChallengeUrl);
+  if (copied) {
+    copyChallengeLinkBtn.textContent = "Link copied";
+    challengePanelMessage.textContent = "Challenge link copied. Paste it into any message.";
+    setTimeout(() => {
+      copyChallengeLinkBtn.textContent = "Copy challenge link";
+    }, 2200);
+  } else {
+    challengeLinkInput.focus();
+    challengeLinkInput.select();
+    challengePanelMessage.textContent = "Copy the selected link and send it to your friend.";
+  }
+}
+
+async function shareCustomChallengeLink() {
+  if (!currentChallengeUrl) return;
+
+  if (!canUseNativeChallengeShare()) {
+    challengePanelMessage.textContent = "Native sharing is not available here. Use Copy challenge link, WhatsApp, X, or Email instead.";
+    return;
+  }
+
+  shareChallengeLinkBtn.disabled = true;
+  shareChallengeLinkBtn.textContent = "Opening share menu...";
+  try {
+    await navigator.share({
+      title: "Pixel Recall friend challenge",
+      text: customChallengeShareText(),
+      url: currentChallengeUrl
+    });
+    challengePanelMessage.textContent = "Challenge shared.";
+  } catch (error) {
+    if (error?.name !== "AbortError") {
+      console.warn("Challenge sharing failed.", error);
+      challengePanelMessage.textContent = "The share menu could not open. Use Copy challenge link, WhatsApp, X, or Email instead.";
+    }
+  } finally {
+    shareChallengeLinkBtn.disabled = false;
+    shareChallengeLinkBtn.textContent = "Share challenge";
+  }
+}
+
+function activeModalState() {
+  if (challengeModal && !challengeModal.hidden) {
+    return { modal: challengeModal, panel: challengePanel, close: hideChallengePanel };
+  }
+  if (shareModal && !shareModal.hidden) {
+    return { modal: shareModal, panel: sharePanel, close: hideSharePanel };
+  }
+  return null;
+}
+
 function setMode(nextMode) {
   if (nextMode === mode) return;
+
   mode = nextMode;
+  if (mode === "custom") {
+    customBuilderActive = !customChallengePuzzle;
+  }
+
   localStorage.setItem("pixelRecallMode", mode);
   updateModeButtons();
   buildGrid();
@@ -2469,28 +3092,36 @@ copyLinkBtn.addEventListener("click", copyShareLink);
 copyImageBtn.addEventListener("click", copyPreparedImage);
 downloadImageBtn.addEventListener("click", downloadPreparedImage);
 closeSharePanelBtn.addEventListener("click", hideSharePanel);
+closeChallengePanelBtn.addEventListener("click", hideChallengePanel);
+copyChallengeLinkBtn.addEventListener("click", copyCustomChallengeLink);
+shareChallengeLinkBtn.addEventListener("click", shareCustomChallengeLink);
+challengeLinkInput.addEventListener("focus", () => challengeLinkInput.select());
 shareModal.addEventListener("click", (event) => {
   if (event.target === shareModal) hideSharePanel();
 });
+challengeModal.addEventListener("click", (event) => {
+  if (event.target === challengeModal) hideChallengePanel();
+});
 
 document.addEventListener("keydown", (event) => {
-  if (!shareModal || shareModal.hidden) return;
+  const active = activeModalState();
+  if (!active) return;
 
   if (event.key === "Escape") {
     event.preventDefault();
-    hideSharePanel();
+    active.close();
     return;
   }
 
   if (event.key !== "Tab") return;
 
-  const focusable = [...sharePanel.querySelectorAll(
-    'a[href], button:not([disabled]):not([hidden]), [tabindex]:not([tabindex="-1"])'
+  const focusable = [...active.panel.querySelectorAll(
+    'a[href], input:not([disabled]), button:not([disabled]):not([hidden]), [tabindex]:not([tabindex="-1"])'
   )].filter((element) => !element.hidden && element.offsetParent !== null);
 
   if (focusable.length === 0) {
     event.preventDefault();
-    sharePanel.focus();
+    active.panel.focus();
     return;
   }
 
@@ -2505,14 +3136,29 @@ document.addEventListener("keydown", (event) => {
     first.focus();
   }
 });
+customSizeSelect.addEventListener("change", () => {
+  if (!isCustomBuilder()) return;
+
+  customBuilderSize = parseCustomGridSize(customSizeSelect.value);
+  localStorage.setItem(CUSTOM_SIZE_STORAGE_KEY, String(customBuilderSize));
+  buildGrid();
+});
+
 dailyModeBtn.addEventListener("click", () => setMode("daily"));
 journeyModeBtn.addEventListener("click", () => setMode("journey"));
+customModeBtn.addEventListener("click", () => setMode("custom"));
 scaleDownBtn.addEventListener("click", () => applyUiScale(uiScale - UI_SCALE_STEP));
 scaleResetBtn.addEventListener("click", () => applyUiScale(1));
 scaleUpBtn.addEventListener("click", () => applyUiScale(uiScale + UI_SCALE_STEP));
 window.addEventListener("resize", () => sizeGrid(currentPuzzle()));
 
-console.info("Pixel Recall build: v9-share-popup");
+console.info("Pixel Recall build: v11-custom-grid-size");
 applyUiScale(uiScale, false);
 updateModeButtons();
 buildGrid();
+if (customChallengePuzzle) {
+  trackEvent("custom_challenge_opened", {
+    selected_cells: customChallengePuzzle.cells.length,
+    grid_size: customChallengePuzzle.size
+  });
+}
