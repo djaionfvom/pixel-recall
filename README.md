@@ -1,4 +1,4 @@
-# Pixel Recall v20 — first-attempt Daily stats
+# Pixel Recall v21 — first-attempt Daily stats + distribution bar fix
 
 This build starts from the streak + community distribution version and adds first-attempt enforcement for Daily stats:
 
@@ -37,3 +37,9 @@ Without backend keys, the game still works. Streaks are local-only and community
 ## Notes
 
 The score table stores one official first attempt per anonymous browser ID per Daily puzzle. Replays are practice only and do not update the community distribution. There is no login, email, or account system.
+
+
+## v21 fix
+
+- Fixed score distribution bar fills by making the track and fill spans block-level elements.
+- Updated cache-busting query strings in `index.html` so browsers load the fixed CSS.

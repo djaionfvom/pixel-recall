@@ -586,7 +586,7 @@ body.share-modal-open {
 }
 
 
-/* v19: daily streak + community score distribution */
+/* v21: daily streak + community score distribution + visible bar fills */
 .daily-progress-panel {
   display: grid;
   gap: 10px;
@@ -649,6 +649,7 @@ body.share-modal-open {
 }
 
 .daily-distribution-track {
+  display: block;
   height: 10px;
   overflow: hidden;
   border-radius: 999px;
@@ -656,6 +657,7 @@ body.share-modal-open {
 }
 
 .daily-distribution-fill {
+  display: block;
   height: 100%;
   width: 0%;
   border-radius: inherit;
