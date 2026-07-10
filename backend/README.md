@@ -1,50 +1,33 @@
-# Pixel Recall backend setup
+# Supabase setup — Pixel Recall v26
 
-This build is backend-ready with Supabase. Daily stats use first attempts only.
+This build uses the same Supabase project for two independent features:
 
-## 1. Create the database
+- **Daily:** the first Daily completion per anonymous browser and Daily number is official.
+- **Run:** every finished Recall Run may be submitted to the single all-time leaderboard. The same player may appear many times. Only duplicate submission of the exact same generated run is blocked.
 
-1. Go to Supabase and create a new project.
-2. Open **SQL Editor**.
-3. Paste and run `backend/supabase-schema.sql`.
+## Update the existing project
 
-If you already ran the v19 SQL, run the v20 SQL too. It replaces the old RPC function with first-attempt-only behavior.
+1. Open the Supabase project.
+2. Open **SQL Editor** and create a new query.
+3. Paste all of `supabase-schema.sql` and click **Run**.
+4. Deploy the complete website folder.
 
-This creates:
+The SQL is designed to be run over the earlier Daily schema. It keeps the Daily table/functions and adds:
 
-- `daily_scores` table
-- public read access for daily score distribution
-- `submit_daily_score(...)` RPC function
-- one official first attempt per anonymous browser/user per Daily puzzle
+- `run_scores`
+- `submit_run_score(...)`
+- `get_run_leaderboard(...)` (all-time only)
 
-## 2. Add your frontend keys
+## Public key
 
-Open `backend-config.js` and paste:
+`backend-config.js` contains the project URL and browser-safe Publishable key supplied for this project. Do not replace it with a secret or service-role key.
 
-```js
-window.PIXEL_RECALL_BACKEND = {
-  SUPABASE_URL: "https://YOUR-PROJECT.supabase.co",
-  SUPABASE_ANON_KEY: "YOUR_ANON_PUBLIC_KEY"
-};
-```
+## Leaderboard privacy and safety
 
-Find these values in Supabase:
+The public leaderboard function returns only name, message, patterns passed, timestamp, and rank. It does not return the internal anonymous browser ID or run seed.
 
-- **Project Settings → API → Project URL**
-- **Project Settings → API → Project API keys → anon public**
+Names and messages currently have no content or character restrictions, as requested. The frontend creates DOM text nodes and uses `textContent`; it does not interpret leaderboard content as HTML.
 
-## 3. Deploy
+## Fairness limitation
 
-Upload the whole folder contents to GitHub Pages, including:
-
-- `index.html`
-- `script.js`
-- `style.css`
-- `backend-config.js`
-- the other existing static files
-
-The game still works before the backend is connected. In that state, Daily streaks are local-only and community distribution shows a setup message.
-
-## Privacy note
-
-No login, email, or name is required. The frontend stores a random anonymous browser ID in `localStorage` and sends only Daily result stats. Replays after the first Daily completion are returned as practice attempts and do not overwrite the official result.
+The SQL validates basic values and prevents duplicate clicks for one `run_id`, but the game runs in the browser. A determined person could still modify client code and submit a fabricated result. Strong anti-cheat would require server-created run sessions and server-side verification of every round.
