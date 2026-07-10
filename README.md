@@ -1,45 +1,32 @@
-# Pixel Recall v21 — first-attempt Daily stats + distribution bar fix
+# Pixel Recall v26 — progressive Run + longer previews
 
-This build starts from the streak + community distribution version and adds first-attempt enforcement for Daily stats:
+This build keeps the compact v25 design and changes only the requested gameplay/leaderboard behavior.
 
-- Local Daily streak after completing the Daily puzzle
-- Only the first completed Daily attempt per anonymous browser/user counts in stats
-- Daily replays are treated as practice only
-- Best streak saved in `localStorage`
-- Daily community score distribution across users
-- Percentile-style message: “You beat X% of today’s players”
-- Backend-ready Supabase setup with first-attempt-only official scores
-- Share text can include streak/percentile when available
-- Custom/friend challenge sharing behavior from v18 is preserved
+## Daily
+
+- Same Daily mode and first-attempt community statistics
+- Local current/best streak
+- Daily preview increased from 2.3 seconds to 2.8 seconds
+
+## Run
+
+- Separate main Run mode
+- Score remains the number of patterns passed at the existing 80% threshold
+- Every run receives a fresh randomized pattern sequence
+- Early Run rounds use small grids first: 5×5, then 6×6, 7×7, and upward
+- Preview time stays at 3.2 seconds while grid size grows to 13×13
+- After the grid reaches 13×13, preview time gradually shortens by 0.2 seconds every three rounds
+- Preview time never falls below 2.0 seconds
+- Added more 5×5, 6×6, and 7×7 patterns so early runs vary more
+- Only one All-time leaderboard is shown
+- The same player may submit and appear multiple times
+- Names/messages remain unrestricted and are rendered safely as plain text
+
+## Challenge
+
+- Preserved as the smaller secondary `Challenge` action above the Daily/Run switch
+- Custom preview increased from 2.3 seconds to 2.8 seconds
 
 ## Backend
 
-The backend is prepared but not deployed from this ZIP. To connect it:
-
-1. Create a Supabase project.
-2. Run `backend/supabase-schema.sql` in Supabase SQL Editor.
-3. Open `backend-config.js` and paste your Supabase Project URL and anon public key.
-4. Deploy the whole folder to GitHub Pages.
-
-If you already ran the v19 SQL, run the v20 SQL as well. It replaces the submit function so future replays no longer overwrite the first official attempt.
-
-Without backend keys, the game still works. Streaks are local-only and community stats show a setup message.
-
-## Files
-
-- `index.html` — app markup and new Daily progress panel
-- `script.js` — game logic, local streaks, Supabase calls, distribution rendering
-- `style.css` — existing design plus Daily progress panel styles
-- `backend-config.js` — frontend backend keys placeholder
-- `backend/supabase-schema.sql` — database table + RPC setup
-- `backend/README.md` — setup instructions
-
-## Notes
-
-The score table stores one official first attempt per anonymous browser ID per Daily puzzle. Replays are practice only and do not update the community distribution. There is no login, email, or account system.
-
-
-## v21 fix
-
-- Fixed score distribution bar fills by making the track and fill spans block-level elements.
-- Updated cache-busting query strings in `index.html` so browsers load the fixed CSS...
+This version uses the same Run leaderboard table/functions as v24/v25. If that schema is already installed in Supabase, no SQL rerun is required. New installations can run `backend/supabase-schema.sql`.

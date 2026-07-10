@@ -70,14 +70,14 @@ h1 {
   max-width: 390px;
   color: var(--muted);
   line-height: 1.45;
-  margin: 9px auto 0;
+  margin: 0 auto 10px;
 }
 
 
 .mode-switch {
   width: fit-content;
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   gap: 4px;
   margin: 17px auto 0;
   padding: 4px;
@@ -586,7 +586,7 @@ body.share-modal-open {
 }
 
 
-/* v21: daily streak + community score distribution + visible bar fills */
+/* v22: daily streak + community score distribution + solid visible bar fills */
 .daily-progress-panel {
   display: grid;
   gap: 10px;
@@ -650,17 +650,201 @@ body.share-modal-open {
 
 .daily-distribution-track {
   display: block;
+  position: relative;
   height: 10px;
   overflow: hidden;
   border-radius: 999px;
-  background: rgba(255, 255, 255, .08);
+  background: linear-gradient(
+    90deg,
+    var(--accent) 0 var(--daily-bar-width, 0%),
+    rgba(255, 255, 255, .08) var(--daily-bar-width, 0%) 100%
+  );
 }
 
 .daily-distribution-fill {
   display: block;
   height: 100%;
-  width: 0%;
+  width: var(--daily-bar-width, 0%);
   border-radius: inherit;
   background: var(--accent);
   transition: width .35s ease;
+}
+
+
+/* v23: separate Daily + Run main modes, secondary Challenge, randomized Run leaderboard */
+.challenge-extra-button {
+  display: block;
+  width: fit-content;
+  margin: 9px auto 0;
+  padding: 8px 14px;
+  border: 1px solid rgba(255, 255, 255, .08);
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.challenge-extra-button[aria-pressed="true"] {
+  color: var(--accent);
+  border-color: rgba(243, 201, 105, .42);
+  background: rgba(243, 201, 105, .08);
+}
+
+.run-leaderboard-section[hidden],
+.run-submit-panel[hidden] {
+  display: none;
+}
+
+.run-leaderboard-section {
+  margin-top: 18px;
+  padding: 18px;
+  border: 1px solid rgba(255, 255, 255, .09);
+  border-radius: 22px;
+  background: rgba(24, 28, 47, .78);
+}
+
+.run-leaderboard-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.run-leaderboard-header h2 {
+  margin: 0;
+  font-size: 20px;
+}
+
+.run-leaderboard-tabs {
+  display: flex;
+  gap: 6px;
+}
+
+.leaderboard-tab {
+  padding: 8px 11px;
+  font-size: 12px;
+}
+
+.leaderboard-tab[aria-pressed="true"] {
+  background: var(--accent);
+  color: #141414;
+}
+
+.run-submit-panel {
+  display: grid;
+  gap: 8px;
+  margin: 16px 0;
+  padding: 14px;
+  border: 1px solid rgba(243, 201, 105, .24);
+  border-radius: 16px;
+  background: rgba(243, 201, 105, .06);
+}
+
+.run-submit-title {
+  margin: 0 0 2px;
+  color: var(--ink);
+  font-weight: 900;
+}
+
+.run-submit-panel label {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.run-submit-panel input,
+.run-submit-panel textarea {
+  width: 100%;
+  padding: 11px 12px;
+  border: 1px solid rgba(255, 255, 255, .12);
+  border-radius: 12px;
+  background: #101426;
+  color: var(--ink);
+  font: inherit;
+}
+
+.run-submit-panel textarea {
+  resize: vertical;
+  min-height: 78px;
+}
+
+.run-submit-panel input:focus,
+.run-submit-panel textarea:focus {
+  outline: 2px solid rgba(243, 201, 105, .5);
+  outline-offset: 2px;
+}
+
+.run-leaderboard-list {
+  display: grid;
+  gap: 8px;
+  margin: 14px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.run-leaderboard-entry {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: start;
+  padding: 11px 12px;
+  border: 1px solid rgba(255, 255, 255, .07);
+  border-radius: 14px;
+  background: rgba(15, 18, 32, .5);
+}
+
+.run-leaderboard-rank {
+  color: var(--accent);
+  font-weight: 900;
+}
+
+.run-leaderboard-player {
+  min-width: 0;
+}
+
+.run-leaderboard-name {
+  margin: 0;
+  overflow-wrap: anywhere;
+  color: var(--ink);
+  font-weight: 900;
+}
+
+.run-leaderboard-message {
+  margin: 3px 0 0;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.run-leaderboard-score {
+  color: var(--accent);
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.run-refresh-button {
+  width: 100%;
+  margin-top: 12px;
+}
+
+@media (max-width: 520px) {
+  .run-leaderboard-header {
+    display: grid;
+  }
+
+  .run-leaderboard-tabs {
+    width: 100%;
+  }
+
+  .leaderboard-tab {
+    flex: 1;
+  }
+
+  .run-leaderboard-entry {
+    grid-template-columns: 28px minmax(0, 1fr);
+  }
+
+  .run-leaderboard-score {
+    grid-column: 2;
+  }
 }

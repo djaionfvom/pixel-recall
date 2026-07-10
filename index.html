@@ -23,7 +23,7 @@
   <meta name="twitter:image" content="https://pixelrecall.net/og-image.png" />
 
   <link rel="icon" href="icon.svg" type="image/svg+xml" />
-  <link rel="stylesheet" href="style.css?v=v21-distribution-bars-fix" />
+  <link rel="stylesheet" href="style.css?v=v26-progressive-run-longer-preview" />
 
   <!-- Google tag (gtag.js) -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-20214X136N"></script>
@@ -56,15 +56,16 @@
 
       <p class="subtitle">Memorize the pixel art, then redraw it from memory.</p>
 
-      <div class="mode-switch" role="group" aria-label="Game mode">
+      <button id="customModeBtn" class="challenge-extra-button secondary" type="button" aria-pressed="false">
+        Challenge
+      </button>
+
+      <div class="mode-switch primary-mode-switch" role="group" aria-label="Main game modes">
         <button id="dailyModeBtn" class="mode-option" type="button" aria-pressed="true">
           Daily
         </button>
-        <button id="journeyModeBtn" class="mode-option" type="button" aria-pressed="false">
-          Journey
-        </button>
-        <button id="customModeBtn" class="mode-option" type="button" aria-pressed="false">
-          Custom
+        <button id="runModeBtn" class="mode-option" type="button" aria-pressed="false">
+          Run
         </button>
       </div>
     </section>
@@ -129,6 +130,29 @@
     <button id="shareBtn" class="share-button secondary" type="button" disabled>
       Share result
     </button>
+
+    <section id="runLeaderboardSection" class="run-leaderboard-section" hidden>
+      <div class="run-leaderboard-header">
+        <div>
+          <p class="daily-progress-label">All-time Run leaderboard</p>
+          <h2>Most patterns passed</h2>
+        </div>
+      </div>
+
+      <section id="runSubmitPanel" class="run-submit-panel" hidden>
+        <p class="run-submit-title">Add this run to the leaderboard</p>
+        <label for="runNameInput">Name</label>
+        <input id="runNameInput" type="text" autocomplete="nickname" placeholder="Your name" />
+        <label for="runMessageInput">Message</label>
+        <textarea id="runMessageInput" rows="3" placeholder="Message to the other players"></textarea>
+        <button id="submitRunScoreBtn" type="button">Submit run</button>
+        <p id="runSubmitStatus" class="daily-progress-note" aria-live="polite"></p>
+      </section>
+
+      <p id="runLeaderboardStatus" class="daily-progress-note">Loading leaderboard…</p>
+      <ol id="runLeaderboardList" class="run-leaderboard-list"></ol>
+      <button id="refreshRunLeaderboardBtn" class="secondary run-refresh-button" type="button">Refresh leaderboard</button>
+    </section>
 
   </main>
 
@@ -209,7 +233,7 @@
     </section>
   </div>
 
-  <script src="backend-config.js?v=v21-distribution-bars-fix"></script>
-  <script src="script.js?v=v21-distribution-bars-fix"></script>
+  <script src="backend-config.js?v=v26-progressive-run-longer-preview"></script>
+  <script src="script.js?v=v26-progressive-run-longer-preview"></script>
 </body>
 </html>

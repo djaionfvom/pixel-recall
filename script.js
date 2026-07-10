@@ -1226,6 +1226,539 @@ const puzzles = [
   ], 900)
 ];
 
+const runExtraPuzzles = [
+  makePuzzle("The Diamond", [
+    "...##...",
+    "..####..",
+    ".######.",
+    "########",
+    ".######.",
+    "..####..",
+    "...##...",
+    "........"
+  ], 2350),
+  makePuzzle("The Flag", [
+    "..#.....",
+    "..#####.",
+    "..#####.",
+    "..####..",
+    "..#.....",
+    "..#.....",
+    "..#.....",
+    ".###...."
+  ], 2320),
+  makePuzzle("The Cup", [
+    "........",
+    ".#####..",
+    ".#...#..",
+    ".#...###",
+    ".#...###",
+    ".#...#..",
+    "..###...",
+    "........"
+  ], 2280),
+  makePuzzle("The Paw", [
+    ".##..##.",
+    ".##..##.",
+    "...##...",
+    "..####..",
+    ".######.",
+    ".######.",
+    "..####..",
+    "........"
+  ], 2250),
+  makePuzzle("The Tower Shield", [
+    "..####..",
+    ".######.",
+    "########",
+    "########",
+    ".######.",
+    "..####..",
+    "...##...",
+    "........"
+  ], 2200),
+  makePuzzle("The Signal Lantern", [
+    "...##...",
+    "..####..",
+    "...##...",
+    ".######.",
+    ".##..##.",
+    ".######.",
+    "..####..",
+    "........"
+  ], 2170),
+  makePuzzle("The Crescent Moon", [
+    "..#####.",
+    ".######.",
+    "######..",
+    "#####...",
+    "#####...",
+    "######..",
+    ".######.",
+    "..#####."
+  ], 2120),
+  makePuzzle("The Wind Sailboat", [
+    "...#....",
+    "..##....",
+    ".###....",
+    "#####...",
+    "...#....",
+    "########",
+    ".######.",
+    "........"
+  ], 2080),
+  makePuzzle("The Mountain Pass", [
+    "....#....",
+    "...###...",
+    "..#####..",
+    ".#.###.#.",
+    "##..#..##",
+    "#########",
+    ".#######.",
+    "..#####..",
+    "........."
+  ], 2020),
+  makePuzzle("The Chess Knight", [
+    "....##...",
+    "...####..",
+    "..#####..",
+    "..###....",
+    "..####...",
+    "..######.",
+    ".########",
+    ".##......",
+    "........."
+  ], 1980),
+  makePuzzle("The Robot Face", [
+    ".#######.",
+    "##.....##",
+    "##.#.#.##",
+    "##.....##",
+    "##.###.##",
+    "##.....##",
+    ".#######.",
+    "...###...",
+    "........."
+  ], 1940),
+  makePuzzle("The Beetle", [
+    "....##....",
+    "..#.##.#..",
+    "...####...",
+    "..######..",
+    ".########.",
+    ".##.##.##.",
+    ".########.",
+    "..######..",
+    "...#..#...",
+    ".........."
+  ], 1880),
+  makePuzzle("The Orbital Relay", [
+    "#........#",
+    "##......##",
+    ".##.##.##.",
+    "...####...",
+    "..######..",
+    "..######..",
+    "...####...",
+    ".##.##.##.",
+    "##......##",
+    "#........#"
+  ], 1830),
+  makePuzzle("The Dragonfly", [
+    "##......##",
+    ".##.##.##.",
+    "..######..",
+    "....##....",
+    "...####...",
+    "....##....",
+    "..######..",
+    ".##.##.##.",
+    "##......##",
+    ".........."
+  ], 1780),
+  makePuzzle("The Web Spider", [
+    "#...##...#",
+    ".#..##..#.",
+    "..######..",
+    "...####...",
+    "..######..",
+    "...####...",
+    "..######..",
+    ".#..##..#.",
+    "#...##...#",
+    ".........."
+  ], 1730),
+  makePuzzle("The Circuit Gate", [
+    "#..#..#..#",
+    "##########",
+    "#..#..#..#",
+    "#..####..#",
+    "####..####",
+    "#..####..#",
+    "#..#..#..#",
+    "##########",
+    "#..#..#..#",
+    ".........."
+  ], 1680),
+  makePuzzle("The Ember Phoenix", [
+    ".....#.....",
+    ".#...#...#.",
+    "..#..#..#..",
+    "...#####...",
+    "..#######..",
+    ".#########.",
+    "...#####...",
+    "....###....",
+    "...#.#.#...",
+    "..#.....#..",
+    "..........."
+  ], 1610),
+  makePuzzle("The Deep Kraken", [
+    "...#####...",
+    "..#######..",
+    ".#########.",
+    "###.#.#.###",
+    "###########",
+    "..#######..",
+    ".#.#.#.#.#.",
+    "#.#.#.#.#.#",
+    ".#.#.#.#.#.",
+    "#..#...#..#",
+    "..........."
+  ], 1550),
+  makePuzzle("The Observatory", [
+    ".....##.....",
+    "....####....",
+    "...######...",
+    "..########..",
+    ".##########.",
+    "....####....",
+    "....####....",
+    "...######...",
+    "..##.##.##..",
+    ".##..##..##.",
+    "############",
+    "............"
+  ], 1480),
+  makePuzzle("The Broken Labyrinth", [
+    "############",
+    "#..........#",
+    "#.########.#",
+    "#.#......#.#",
+    "#.#.####.#.#",
+    "#.#.#..#.#.#",
+    "#.#.##.#.#.#",
+    "#.#....#.#.#",
+    "#.######.#.#",
+    "#........#.#",
+    "##########.#",
+    "............"
+  ], 1420),
+  makePuzzle("The Storm Eye", [
+    "....####....",
+    "..########..",
+    ".###....###.",
+    "###.####.###",
+    "##.######.##",
+    "##.##..##.##",
+    "##.######.##",
+    "###.####.###",
+    ".###....###.",
+    "..########..",
+    "....####....",
+    "............"
+  ], 1360),
+  makePuzzle("The Time Vault", [
+    ".##########.",
+    "##........##",
+    "##..####..##",
+    "##.######.##",
+    "##.##..##.##",
+    "##..####..##",
+    "##..####..##",
+    "##.##..##.##",
+    "##.######.##",
+    "##........##",
+    ".##########.",
+    "............"
+  ], 1300),
+  makePuzzle("The Star Engine", [
+    ".....##.....",
+    "#....##....#",
+    ".##..##..##.",
+    "..########..",
+    "...######...",
+    "############",
+    "...######...",
+    "..########..",
+    ".##..##..##.",
+    "#....##....#",
+    ".....##.....",
+    "............"
+  ], 1240),
+  makePuzzle("The Memory Core", [
+    "############",
+    "#..#....#..#",
+    "#.########.#",
+    "###..##..###",
+    "#.########.#",
+    "#..######..#",
+    "#..######..#",
+    "#.########.#",
+    "###..##..###",
+    "#.########.#",
+    "#..#....#..#",
+    "############"
+  ], 1180)
+];
+
+const runProgressionPuzzles = [
+  makePuzzle("The Mini Diamond", [
+    "..#..",
+    ".#.#.",
+    "#...#",
+    ".#.#.",
+    "..#.."
+  ], 3200),
+  makePuzzle("The Mini T", [
+    "#####",
+    "..#..",
+    "..#..",
+    "..#..",
+    "..#.."
+  ], 3200),
+  makePuzzle("The Mini Heart", [
+    ".#.#.",
+    "#####",
+    "#####",
+    ".###.",
+    "..#.."
+  ], 3200),
+  makePuzzle("The Mini Cup", [
+    "#...#",
+    "#...#",
+    "#...#",
+    ".###.",
+    "..#.."
+  ], 3200),
+  makePuzzle("The Mini L", [
+    "#....",
+    "#....",
+    "#....",
+    "#....",
+    "#####"
+  ], 3200),
+  makePuzzle("The Mini X", [
+    "#...#",
+    ".#.#.",
+    "..#..",
+    ".#.#.",
+    "#...#"
+  ], 3200),
+  makePuzzle("The Mini Stairs", [
+    "#....",
+    "##...",
+    "###..",
+    "####.",
+    "#####"
+  ], 3200),
+  makePuzzle("The Mini U", [
+    "#...#",
+    "#...#",
+    "#...#",
+    "#...#",
+    ".###."
+  ], 3200),
+
+  makePuzzle("The Small Ring", [
+    ".####.",
+    "#....#",
+    "#....#",
+    "#....#",
+    "#....#",
+    ".####."
+  ], 3200),
+  makePuzzle("The Small Boat", [
+    "......",
+    "...#..",
+    "..###.",
+    "######",
+    ".####.",
+    "......"
+  ], 3200),
+  makePuzzle("The Small Bell", [
+    "..##..",
+    ".####.",
+    ".####.",
+    ".####.",
+    "######",
+    "..##.."
+  ], 3200),
+  makePuzzle("The Small Chair", [
+    "##....",
+    "##....",
+    "######",
+    "##..##",
+    "##..##",
+    "......"
+  ], 3200),
+  makePuzzle("The Small Shield", [
+    ".####.",
+    "######",
+    "######",
+    ".####.",
+    "..##..",
+    "......"
+  ], 3200),
+  makePuzzle("The Small Crown", [
+    "#....#",
+    "##..##",
+    "######",
+    ".####.",
+    ".####.",
+    "......"
+  ], 3200),
+  makePuzzle("The Small Key", [
+    ".###..",
+    "#...#.",
+    ".###..",
+    "...#..",
+    "...###",
+    "......"
+  ], 3200),
+  makePuzzle("The Small Flag", [
+    "##....",
+    "#####.",
+    "#####.",
+    "##....",
+    "##....",
+    "......"
+  ], 3200),
+  makePuzzle("The Small Cat", [
+    ".#..#.",
+    "######",
+    "##..##",
+    "######",
+    ".####.",
+    "......"
+  ], 3200),
+
+  makePuzzle("The Seven Star", [
+    "...#...",
+    "#..#..#",
+    ".#####.",
+    "..###..",
+    ".#####.",
+    "#..#..#",
+    "...#..."
+  ], 3200),
+  makePuzzle("The Seven Flower", [
+    "..#.#..",
+    ".#####.",
+    "#######",
+    ".#####.",
+    "...#...",
+    "..###..",
+    "...#..."
+  ], 3200),
+  makePuzzle("The Seven Shield", [
+    ".#####.",
+    "#######",
+    "#######",
+    ".#####.",
+    "..###..",
+    "...#...",
+    "......."
+  ], 3200),
+  makePuzzle("The Seven Crown", [
+    "#..#..#",
+    "##.#.##",
+    "#######",
+    ".#####.",
+    "..###..",
+    ".......",
+    "......."
+  ], 3200),
+  makePuzzle("The Seven Umbrella", [
+    "...#...",
+    "..###..",
+    ".#####.",
+    "#######",
+    "...#...",
+    "...#...",
+    "..##..."
+  ], 3200),
+  makePuzzle("The Seven Fish", [
+    ".......",
+    "..###..",
+    ".#####.",
+    "######.",
+    "#####.#",
+    "..###..",
+    "......."
+  ], 3200),
+  makePuzzle("The Seven Tree", [
+    "...#...",
+    "..###..",
+    ".#####.",
+    "..###..",
+    "...#...",
+    "..###..",
+    "......."
+  ], 3200),
+  makePuzzle("The Seven Rocket", [
+    "...#...",
+    "..###..",
+    ".#####.",
+    ".#####.",
+    "..###..",
+    "..#.#..",
+    ".#...#."
+  ], 3200),
+  makePuzzle("The Seven Hourglass", [
+    ".#####.",
+    ".#####.",
+    "..###..",
+    "...#...",
+    "..###..",
+    ".#####.",
+    ".#####."
+  ], 3200),
+  makePuzzle("The Seven Castle", [
+    ".#.#.#.",
+    "#######",
+    "#######",
+    "##...##",
+    "##...##",
+    "#######",
+    "......."
+  ], 3200)
+];
+
+function estimateRunPatternDifficulty(puzzle) {
+  const occupied = new Set(puzzle.cells);
+  const density = puzzle.cells.length / (puzzle.size * puzzle.size);
+  let edgeTransitions = 0;
+
+  for (let row = 0; row < puzzle.size; row++) {
+    for (let column = 0; column < puzzle.size; column++) {
+      const index = row * puzzle.size + column;
+      const filled = occupied.has(index);
+      if (column + 1 < puzzle.size && filled !== occupied.has(index + 1)) edgeTransitions++;
+      if (row + 1 < puzzle.size && filled !== occupied.has(index + puzzle.size)) edgeTransitions++;
+    }
+  }
+
+  const maximumEdges = Math.max(1, 2 * puzzle.size * (puzzle.size - 1));
+  const boundaryComplexity = edgeTransitions / maximumEdges;
+  const timePressure = Math.max(0, 3000 - puzzle.time) / 300;
+
+  return (puzzle.size * 1.4) + (density * 4) + (boundaryComplexity * 7) + timePressure;
+}
+
+const runPuzzles = [...puzzles, ...runExtraPuzzles, ...runProgressionPuzzles]
+  .sort((left, right) => estimateRunPatternDifficulty(left) - estimateRunPatternDifficulty(right));
+
 const DAILY_PATTERN_DATA = [
   ["The Video Camera", ["........", "........", ".####.#.", ".######.", ".######.", ".####.#.", "........", "........"]],
   ["The Closed Window", ["........", ".######.", ".######.", ".##..##.", ".##..##.", ".######.", ".######.", "........"]],
@@ -1594,7 +2127,8 @@ const DAILY_PATTERN_DATA = [
   ["The Half Thermometer", ["...##...", "..#.##..", "..#.##..", "..####..", "..###...", "..####..", "..####..", "...##..."]],
 ];
 
-const dailyPuzzles = DAILY_PATTERN_DATA.map(([name, rows]) => makePuzzle(name, rows, 2300));
+const DAILY_PREVIEW_TIME = 2800;
+const dailyPuzzles = DAILY_PATTERN_DATA.map(([name, rows]) => makePuzzle(name, rows, DAILY_PREVIEW_TIME));
 
 const PASS_SCORE = 80;
 
@@ -1604,7 +2138,7 @@ const clearBtn = document.querySelector("#clearBtn");
 const checkBtn = document.querySelector("#checkBtn");
 const shareBtn = document.querySelector("#shareBtn");
 const dailyModeBtn = document.querySelector("#dailyModeBtn");
-const journeyModeBtn = document.querySelector("#journeyModeBtn");
+const runModeBtn = document.querySelector("#runModeBtn");
 const customModeBtn = document.querySelector("#customModeBtn");
 const customSizeControl = document.querySelector("#customSizeControl");
 const customSizeSelect = document.querySelector("#customSizeSelect");
@@ -1645,16 +2179,49 @@ const dailyReturnText = document.querySelector("#dailyReturnText");
 const dailyCommunityPanel = document.querySelector("#dailyCommunityPanel");
 const dailyCommunityHeadline = document.querySelector("#dailyCommunityHeadline");
 const dailyDistributionBars = document.querySelector("#dailyDistributionBars");
+const runStatusPanel = document.querySelector("#runStatusPanel");
+const runPassedText = document.querySelector("#runPassedText");
+const runBestText = document.querySelector("#runBestText");
+const runStatusText = document.querySelector("#runStatusText");
+const runLeaderboardSection = document.querySelector("#runLeaderboardSection");
+const runSubmitPanel = document.querySelector("#runSubmitPanel");
+const runNameInput = document.querySelector("#runNameInput");
+const runMessageInput = document.querySelector("#runMessageInput");
+const submitRunScoreBtn = document.querySelector("#submitRunScoreBtn");
+const runSubmitStatus = document.querySelector("#runSubmitStatus");
+const runLeaderboardStatus = document.querySelector("#runLeaderboardStatus");
+const runLeaderboardList = document.querySelector("#runLeaderboardList");
+const refreshRunLeaderboardBtn = document.querySelector("#refreshRunLeaderboardBtn");
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const DAILY_EPOCH = Date.UTC(2026, 0, 1);
 const CUSTOM_DEFAULT_SIZE = 8;
 const CUSTOM_MIN_SIZE = 5;
 const CUSTOM_MAX_SIZE = 12;
-const CUSTOM_PREVIEW_TIME = 2300;
+const CUSTOM_PREVIEW_TIME = 2800;
 const CUSTOM_SIZE_STORAGE_KEY = "pixelRecallCustomGridSize";
 const DAILY_STREAK_STORAGE_KEY = "pixelRecallDailyStreakV1";
 const ANONYMOUS_USER_STORAGE_KEY = "pixelRecallAnonymousUserIdV1";
+const RUN_BEST_STORAGE_KEY = "pixelRecallRunBestV1";
+const RUN_NAME_STORAGE_KEY = "pixelRecallRunNameV1";
+const RUN_LEADERBOARD_LIMIT = 50;
+const RUN_SEQUENCE_LENGTH = 120;
+const RUN_PREVIEW_START_MS = 3200;
+const RUN_PREVIEW_MIN_MS = 2000;
+const RUN_PREVIEW_STEP_MS = 200;
+const RUN_PREVIEW_STEP_ROUNDS = 3;
+const RUN_GRID_STAGES = [
+  { size: 5, rounds: 2 },
+  { size: 6, rounds: 2 },
+  { size: 7, rounds: 2 },
+  { size: 8, rounds: 3 },
+  { size: 9, rounds: 3 },
+  { size: 10, rounds: 3 },
+  { size: 11, rounds: 3 },
+  { size: 12, rounds: 3 },
+  { size: 13, rounds: 3 }
+];
+const RUN_STEADY_PREVIEW_ROUNDS = RUN_GRID_STAGES.reduce((total, stage) => total + stage.rounds, 0);
 const DAILY_DISTRIBUTION_BUCKETS = [
   { label: "0–49%", min: 0, max: 49 },
   { label: "50–69%", min: 50, max: 69 },
@@ -1688,18 +2255,17 @@ let currentChallengeUrl = "";
 let challengeModalReturnFocus = null;
 
 let mode = customChallengePuzzle ? "custom" : "daily";
-const JOURNEY_RUN_KEY = "pixelRecallJourneyRunLevelV2";
-const storedLevel = Number(localStorage.getItem(JOURNEY_RUN_KEY));
-let level = Number.isFinite(storedLevel)
-  ? Math.max(0, Math.min(storedLevel, puzzles.length - 1))
-  : 0;
-let journeyHighScore = Math.max(
-  1,
-  Math.min(
-    puzzles.length,
-    Number(localStorage.getItem("pixelRecallJourneyHighScore")) || level + 1
-  )
-);
+let runSequence = [];
+let runSequenceIndex = 0;
+let runSequenceCycle = 0;
+let runPassed = 0;
+let runBest = Math.max(0, Number(localStorage.getItem(RUN_BEST_STORAGE_KEY)) || 0);
+let runActive = false;
+let runFinished = false;
+let runId = "";
+let runSeed = "";
+let lastCompletedRun = null;
+let runLeaderboardLoading = false;
 let selected = new Set();
 let canDraw = false;
 let isDrawing = false;
@@ -1871,7 +2437,7 @@ function renderDailyDistribution(bucketCounts, total) {
     row.className = "daily-distribution-row";
     row.innerHTML = `
       <span>${bucket.label}</span>
-      <span class="daily-distribution-track" aria-hidden="true"><span class="daily-distribution-fill" style="width: ${percent}%"></span></span>
+      <span class="daily-distribution-track" aria-hidden="true" style="--daily-bar-width: ${percent}%"><span class="daily-distribution-fill"></span></span>
       <span>${count}</span>
     `;
     dailyDistributionBars.appendChild(row);
@@ -2006,6 +2572,336 @@ async function handleDailyCompletion(result) {
   }
 }
 
+
+function randomToken(prefix = "run") {
+  const token = globalThis.crypto?.randomUUID
+    ? globalThis.crypto.randomUUID()
+    : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  return `${prefix}-${token}`;
+}
+
+function hashRunSeed(value) {
+  let hash = 2166136261;
+  for (const character of String(value)) {
+    hash ^= character.charCodeAt(0);
+    hash = Math.imul(hash, 16777619);
+  }
+  return hash >>> 0;
+}
+
+function createSeededRandom(seed) {
+  let state = hashRunSeed(seed) || 1;
+  return function seededRandom() {
+    state += 0x6D2B79F5;
+    let value = state;
+    value = Math.imul(value ^ (value >>> 15), value | 1);
+    value ^= value + Math.imul(value ^ (value >>> 7), value | 61);
+    return ((value ^ (value >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function shuffledCopy(items, random = Math.random) {
+  const copy = [...items];
+  for (let index = copy.length - 1; index > 0; index--) {
+    const randomIndex = Math.floor(random() * (index + 1));
+    [copy[index], copy[randomIndex]] = [copy[randomIndex], copy[index]];
+  }
+  return copy;
+}
+
+function runGridSizeForRound(roundIndex) {
+  let remaining = Math.max(0, roundIndex);
+
+  for (const stage of RUN_GRID_STAGES) {
+    if (remaining < stage.rounds) return stage.size;
+    remaining -= stage.rounds;
+  }
+
+  return RUN_GRID_STAGES[RUN_GRID_STAGES.length - 1].size;
+}
+
+function runPreviewTimeForRound(roundIndex) {
+  if (roundIndex < RUN_STEADY_PREVIEW_ROUNDS) return RUN_PREVIEW_START_MS;
+
+  const pressureRound = roundIndex - RUN_STEADY_PREVIEW_ROUNDS;
+  const pressureSteps = Math.floor(pressureRound / RUN_PREVIEW_STEP_ROUNDS) + 1;
+  return Math.max(
+    RUN_PREVIEW_MIN_MS,
+    RUN_PREVIEW_START_MS - pressureSteps * RUN_PREVIEW_STEP_MS
+  );
+}
+
+function createRunSequence(seed = runSeed, startRound = 0) {
+  const random = createSeededRandom(seed || randomToken("seed"));
+  const patternsBySize = new Map();
+  const queuesBySize = new Map();
+
+  runPuzzles.forEach((puzzle) => {
+    if (!patternsBySize.has(puzzle.size)) patternsBySize.set(puzzle.size, []);
+    patternsBySize.get(puzzle.size).push(puzzle);
+  });
+
+  function refillQueue(size, previousName = "") {
+    const source = patternsBySize.get(size) || [];
+    const queue = shuffledCopy(source, random);
+    if (queue.length > 1 && queue[0]?.name === previousName) {
+      [queue[0], queue[1]] = [queue[1], queue[0]];
+    }
+    queuesBySize.set(size, queue);
+  }
+
+  function drawPattern(size, previousName = "") {
+    let queue = queuesBySize.get(size);
+    if (!queue || queue.length === 0) {
+      refillQueue(size, previousName);
+      queue = queuesBySize.get(size);
+    }
+
+    const puzzle = queue?.shift();
+    if (!puzzle) {
+      throw new Error(`No Run patterns available for ${size}×${size}.`);
+    }
+    return puzzle;
+  }
+
+  const sequence = [];
+  let localIndex = 0;
+  let previousName = "";
+
+  while (localIndex < RUN_SEQUENCE_LENGTH) {
+    const absoluteRound = startRound + localIndex;
+    const size = runGridSizeForRound(absoluteRound);
+
+    let blockLength = 1;
+    while (localIndex + blockLength < RUN_SEQUENCE_LENGTH) {
+      const nextAbsoluteRound = startRound + localIndex + blockLength;
+      if (runGridSizeForRound(nextAbsoluteRound) !== size) break;
+      if (absoluteRound >= RUN_STEADY_PREVIEW_ROUNDS && blockLength >= RUN_PREVIEW_STEP_ROUNDS) break;
+      blockLength += 1;
+    }
+
+    const block = [];
+    for (let offset = 0; offset < blockLength; offset++) {
+      const puzzle = drawPattern(size, previousName);
+      block.push(puzzle);
+      previousName = puzzle.name;
+    }
+
+    // Keep the selected patterns varied between runs, but order each short block
+    // from simpler to more complex so the difficulty does not jump backwards.
+    block.sort((left, right) => estimateRunPatternDifficulty(left) - estimateRunPatternDifficulty(right));
+
+    block.forEach((puzzle, offset) => {
+      const roundIndex = startRound + localIndex + offset;
+      sequence.push({
+        ...puzzle,
+        time: runPreviewTimeForRound(roundIndex)
+      });
+    });
+
+    previousName = block[block.length - 1]?.name || previousName;
+    localIndex += blockLength;
+  }
+
+  return sequence;
+}
+
+function ensureRunSequence() {
+  if (runSequence.length === 0) {
+    runSequence = createRunSequence(`${runSeed}:${runSequenceCycle}`, 0);
+  }
+
+  if (runSequenceIndex >= runSequence.length) {
+    const previousPuzzle = runSequence[runSequence.length - 1];
+    runSequenceCycle += 1;
+    const startRound = runSequenceCycle * RUN_SEQUENCE_LENGTH;
+    runSequence = createRunSequence(`${runSeed}:${runSequenceCycle}`, startRound);
+    if (runSequence.length > 1 && previousPuzzle?.name === runSequence[0]?.name) {
+      [runSequence[0], runSequence[1]] = [runSequence[1], runSequence[0]];
+    }
+    runSequenceIndex = 0;
+  }
+}
+
+function beginRun() {
+  runId = randomToken("run");
+  runSeed = randomToken("seed");
+  runSequenceCycle = 0;
+  runSequence = createRunSequence(`${runSeed}:${runSequenceCycle}`, 0);
+  runSequenceIndex = 0;
+  runPassed = 0;
+  runActive = true;
+  runFinished = false;
+  lastCompletedRun = null;
+  runSubmitPanel.hidden = true;
+  runSubmitStatus.textContent = "";
+  submitRunScoreBtn.disabled = false;
+  submitRunScoreBtn.textContent = "Submit run";
+  updateRunPanel();
+
+  trackEvent("run_started", {
+    run_id: runId,
+    pattern_pool_size: runPuzzles.length,
+    sequence_size: runSequence.length
+  });
+}
+
+function updateRunPanel() {
+  const isRun = mode === "run";
+  if (runStatusPanel) runStatusPanel.hidden = true;
+  if (runLeaderboardSection) runLeaderboardSection.hidden = !isRun;
+}
+
+function showRunSubmitPanel() {
+  if (!lastCompletedRun) return;
+  runSubmitPanel.hidden = false;
+  runNameInput.value = localStorage.getItem(RUN_NAME_STORAGE_KEY) || "";
+  runMessageInput.value = "";
+  runSubmitStatus.textContent = backendEnabled()
+    ? `${lastCompletedRun.patternsPassed} ${lastCompletedRun.patternsPassed === 1 ? "pattern" : "patterns"} passed.`
+    : "Connect Supabase to submit this run.";
+  submitRunScoreBtn.disabled = !backendEnabled();
+}
+
+async function submitRunScoreToBackend(run) {
+  if (!backendEnabled()) throw new Error("Backend is not configured.");
+
+  const displayName = runNameInput.value || "Anonymous";
+  const playerMessage = runMessageInput.value;
+  const payload = {
+    p_run_id: run.runId,
+    p_anonymous_user_id: getAnonymousUserId(),
+    p_display_name: displayName,
+    p_message: playerMessage,
+    p_patterns_passed: run.patternsPassed,
+    p_patterns_attempted: run.patternsAttempted,
+    p_run_seed: run.runSeed
+  };
+
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/rpc/submit_run_score`, {
+    method: "POST",
+    headers: supabaseHeaders({ Prefer: "return=representation" }),
+    body: JSON.stringify(payload)
+  });
+
+  if (!response.ok) throw new Error(`Run score submit failed: ${response.status}`);
+  const rows = await response.json();
+  return Array.isArray(rows) ? rows[0] : rows;
+}
+
+async function fetchRunLeaderboard() {
+  if (!backendEnabled()) return [];
+
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_run_leaderboard`, {
+    method: "POST",
+    headers: supabaseHeaders({ Prefer: "return=representation" }),
+    body: JSON.stringify({
+      p_period: "all",
+      p_limit: RUN_LEADERBOARD_LIMIT
+    })
+  });
+
+  if (!response.ok) throw new Error(`Run leaderboard fetch failed: ${response.status}`);
+  const rows = await response.json();
+  return Array.isArray(rows) ? rows : [];
+}
+
+function renderRunLeaderboard(rows) {
+  runLeaderboardList.innerHTML = "";
+
+  if (!rows.length) {
+    runLeaderboardStatus.textContent = backendEnabled()
+      ? "No submitted runs here yet."
+      : "Connect Supabase to activate the leaderboard.";
+    return;
+  }
+
+  runLeaderboardStatus.textContent = `${rows.length} ${rows.length === 1 ? "run" : "runs"} shown.`;
+
+  rows.forEach((row, index) => {
+    const item = document.createElement("li");
+    item.className = "run-leaderboard-entry";
+
+    const rank = document.createElement("span");
+    rank.className = "run-leaderboard-rank";
+    rank.textContent = `#${Number(row.rank_position) || index + 1}`;
+
+    const player = document.createElement("div");
+    player.className = "run-leaderboard-player";
+
+    const name = document.createElement("p");
+    name.className = "run-leaderboard-name";
+    name.textContent = row.display_name || "Anonymous";
+    player.appendChild(name);
+
+    if (row.message) {
+      const playerMessage = document.createElement("p");
+      playerMessage.className = "run-leaderboard-message";
+      playerMessage.textContent = row.message;
+      player.appendChild(playerMessage);
+    }
+
+    const score = document.createElement("span");
+    score.className = "run-leaderboard-score";
+    const passed = Number(row.patterns_passed) || 0;
+    score.textContent = `${passed} passed`;
+
+    item.append(rank, player, score);
+    runLeaderboardList.appendChild(item);
+  });
+}
+
+async function loadRunLeaderboard() {
+  if (runLeaderboardLoading || mode !== "run") return;
+  runLeaderboardLoading = true;
+  runLeaderboardStatus.textContent = backendEnabled()
+    ? "Loading leaderboard…"
+    : "Connect Supabase to activate the leaderboard.";
+  runLeaderboardList.innerHTML = "";
+  refreshRunLeaderboardBtn.disabled = true;
+
+  try {
+    const rows = await fetchRunLeaderboard();
+    renderRunLeaderboard(rows);
+  } catch (error) {
+    console.warn("Run leaderboard is unavailable.", error);
+    runLeaderboardStatus.textContent = "Could not load the leaderboard yet.";
+  } finally {
+    runLeaderboardLoading = false;
+    refreshRunLeaderboardBtn.disabled = false;
+  }
+}
+
+async function submitCompletedRun() {
+  if (!lastCompletedRun || submitRunScoreBtn.disabled) return;
+
+  submitRunScoreBtn.disabled = true;
+  submitRunScoreBtn.textContent = "Submitting…";
+  runSubmitStatus.textContent = "Submitting this run…";
+
+  try {
+    const displayName = runNameInput.value || "Anonymous";
+    localStorage.setItem(RUN_NAME_STORAGE_KEY, displayName);
+    const result = await submitRunScoreToBackend(lastCompletedRun);
+
+    if (result?.accepted === false) {
+      runSubmitStatus.textContent = "This exact run was already submitted.";
+    } else {
+      runSubmitStatus.textContent = "Run added to the leaderboard.";
+      trackEvent("run_score_submitted", {
+        patterns_passed: lastCompletedRun.patternsPassed
+      });
+    }
+
+    submitRunScoreBtn.textContent = "Submitted";
+    await loadRunLeaderboard();
+  } catch (error) {
+    console.warn("Run submission failed.", error);
+    runSubmitStatus.textContent = "Could not submit this run yet.";
+    submitRunScoreBtn.disabled = false;
+    submitRunScoreBtn.textContent = "Try again";
+  }
+}
 
 function expectedCustomCodeLength(size) {
   return Math.ceil((size * size) / 4);
@@ -2148,7 +3044,12 @@ function currentPuzzle() {
     return customChallengePuzzle;
   }
 
-  return puzzles[Math.min(level, puzzles.length - 1)];
+  if (mode === "run") {
+    ensureRunSequence();
+    return runSequence[runSequenceIndex];
+  }
+
+  return dailyPuzzles[dailyInfo().puzzleIndex];
 }
 
 function currentRoundLabel(puzzle) {
@@ -2160,14 +3061,20 @@ function currentRoundLabel(puzzle) {
     return isCustomBuilder() ? "Create a custom challenge" : "Friend challenge";
   }
 
-  const checkpoint = Math.floor(level / 10) * 10 + 1;
-  return `Level ${level + 1} · Best ${journeyHighScore} · Restart ${checkpoint}`;
+  if (mode === "run") {
+    if (runFinished) return `Run over · ${runPassed} passed`;
+    if (runActive && runPassed > 0) return `Run · ${runPassed} passed`;
+    return "Run";
+  }
+
+  return "Pixel Recall";
 }
 
 function updateModeButtons() {
   dailyModeBtn.setAttribute("aria-pressed", String(mode === "daily"));
-  journeyModeBtn.setAttribute("aria-pressed", String(mode === "journey"));
+  runModeBtn.setAttribute("aria-pressed", String(mode === "run"));
   customModeBtn.setAttribute("aria-pressed", String(mode === "custom"));
+  updateRunPanel();
 }
 
 function sizeGrid(puzzle) {
@@ -2208,6 +3115,8 @@ function buildGrid() {
   sharePreparationPromise = null;
   hideSharePanel();
   if (dailyProgressPanel) dailyProgressPanel.hidden = true;
+  if (runSubmitPanel && !(mode === "run" && runFinished && lastCompletedRun)) runSubmitPanel.hidden = true;
+  updateRunPanel();
   scoreBox.textContent = "—";
   puzzleName.textContent = puzzle.name;
   puzzleName.hidden = mode === "daily";
@@ -2265,9 +3174,17 @@ function buildGrid() {
     return;
   }
 
-  message.textContent = mode === "custom"
-    ? "Press Start to memorize your friend's pattern."
-    : "Press Start and memorize the pattern.";
+  if (mode === "custom") {
+    message.textContent = "Press Start to memorize your friend's pattern.";
+  } else if (mode === "run") {
+    startBtn.textContent = runActive ? "Next Pattern" : "Start Run";
+    message.textContent = runActive
+      ? "Press Start and memorize the pattern."
+      : `Pass each pattern with at least ${PASS_SCORE}% accuracy. One miss ends the run.`;
+    loadRunLeaderboard();
+  } else {
+    message.textContent = "Press Start and memorize the pattern.";
+  }
 }
 
 function showPattern() {
@@ -2300,12 +3217,15 @@ function startGame() {
     return;
   }
 
+  if (mode === "run" && !runActive) beginRun();
+
   buildGrid();
 
   trackEvent("game_started", {
     game_mode: mode,
     daily_number: mode === "daily" ? dailyInfo().dailyNumber : 0,
-    journey_level: mode === "journey" ? level + 1 : 0,
+    run_pattern_number: mode === "run" ? runPassed + 1 : 0,
+    run_patterns_passed: mode === "run" ? runPassed : 0,
     custom_pattern_cells: mode === "custom" ? currentPuzzle().cells.length : 0,
     custom_grid_size: mode === "custom" ? currentPuzzle().size : 0
   });
@@ -2367,7 +3287,7 @@ function checkAnswer() {
   const puzzle = currentPuzzle();
   const target = new Set(puzzle.cells);
   const resultMode = mode;
-  const resultLevel = level + 1;
+  const resultRunPatternNumber = resultMode === "run" ? runPassed + 1 : 0;
   const resultDailyNumber = dailyInfo().dailyNumber;
   let correct = 0;
 
@@ -2397,10 +3317,11 @@ function checkAnswer() {
     extra,
     puzzle_name: puzzle.name,
     daily_number: resultMode === "daily" ? resultDailyNumber : 0,
-    journey_level: resultMode === "journey" ? resultLevel : 0,
+    run_pattern_number: resultMode === "run" ? resultRunPatternNumber : 0,
+    run_patterns_passed_before: resultMode === "run" ? runPassed : 0,
     custom_pattern_cells: resultMode === "custom" ? puzzle.cells.length : 0,
     custom_grid_size: resultMode === "custom" ? puzzle.size : 0,
-    passed: resultMode === "journey" && accuracy >= PASS_SCORE ? 1 : 0
+    passed: resultMode === "run" && accuracy >= PASS_SCORE ? 1 : 0
   });
 
   const cellStates = [...document.querySelectorAll(".cell")].map((cell) => {
@@ -2412,7 +3333,8 @@ function checkAnswer() {
 
   lastResult = {
     mode: resultMode,
-    level: resultLevel,
+    runPatternNumber: resultRunPatternNumber,
+    runPatternsPassed: resultMode === "run" ? runPassed : 0,
     dailyNumber: resultDailyNumber,
     accuracy,
     puzzleName: puzzle.name,
@@ -2444,29 +3366,48 @@ function checkAnswer() {
     handleDailyCompletion(lastResult);
   } else if (resultMode === "custom") {
     startBtn.textContent = "Try Again";
-  } else {
-    journeyHighScore = Math.max(journeyHighScore, resultLevel);
+  } else if (resultMode === "run") {
+    const passed = accuracy >= PASS_SCORE;
+    lastResult.runPassedThisPattern = passed;
 
-    if (accuracy >= PASS_SCORE) {
-      if (resultLevel >= puzzles.length) {
-        journeyHighScore = puzzles.length;
-        level = 0;
-        startBtn.textContent = "Start New Run";
-        message.textContent += ` · Journey complete! Best: ${journeyHighScore}`;
-      } else {
-        level++;
-        journeyHighScore = Math.max(journeyHighScore, level + 1);
-        startBtn.textContent = "Next";
-        message.textContent += ` · Next: Level ${level + 1}`;
-      }
+    if (passed) {
+      runPassed += 1;
+      runBest = Math.max(runBest, runPassed);
+      localStorage.setItem(RUN_BEST_STORAGE_KEY, String(runBest));
+      lastResult.runPatternsPassed = runPassed;
+      runSequenceIndex += 1;
+      ensureRunSequence();
+      startBtn.textContent = "Next Pattern";
+      levelInfo.textContent = currentRoundLabel(puzzle);
+      trackEvent("run_pattern_passed", {
+        patterns_passed: runPassed,
+        accuracy,
+        puzzle_name: puzzle.name
+      });
     } else {
-      level = Math.floor((resultLevel - 1) / 10) * 10;
-      startBtn.textContent = `Restart at Level ${level + 1}`;
-      message.textContent += ` · Run ended at Level ${resultLevel}. Restart at ${level + 1}. Best: ${journeyHighScore}`;
+      runActive = false;
+      runFinished = true;
+      runBest = Math.max(runBest, runPassed);
+      localStorage.setItem(RUN_BEST_STORAGE_KEY, String(runBest));
+      lastResult.runPatternsPassed = runPassed;
+      lastCompletedRun = {
+        runId,
+        runSeed,
+        patternsPassed: runPassed,
+        patternsAttempted: runPassed + 1,
+        finishedAt: new Date().toISOString()
+      };
+      startBtn.textContent = "Start New Run";
+      levelInfo.textContent = currentRoundLabel(puzzle);
+      showRunSubmitPanel();
+      trackEvent("run_completed", {
+        patterns_passed: runPassed,
+        final_accuracy: accuracy,
+        final_puzzle_name: puzzle.name
+      });
     }
 
-    localStorage.setItem(JOURNEY_RUN_KEY, String(level));
-    localStorage.setItem("pixelRecallJourneyHighScore", String(journeyHighScore));
+    updateRunPanel();
   }
 
   prepareShareAsset();
@@ -2542,7 +3483,7 @@ async function createResultImageBlob() {
     ? `Daily #${lastResult.dailyNumber}`
     : lastResult.mode === "custom"
       ? "Friend Challenge"
-      : `Journey · Level ${lastResult.level}`;
+      : `Recall Run · ${lastResult.runPatternsPassed || 0} passed`;
 
   ctx.fillStyle = "#f7f7fb";
   ctx.font = "800 52px Inter, system-ui, sans-serif";
@@ -2671,7 +3612,7 @@ function filenameForResult() {
     ? `daily-${lastResult.dailyNumber}`
     : lastResult.mode === "custom"
       ? "friend-challenge"
-      : `journey-level-${lastResult.level}`;
+      : `run-${lastResult.runPatternsPassed || 0}-passed`;
   return `pixel-recall-${roundName}.png`;
 }
 
@@ -2765,7 +3706,7 @@ function shareMessageText() {
     ? `Pixel Recall Daily #${lastResult.dailyNumber}`
     : lastResult.mode === "custom"
       ? "Pixel Recall Friend Challenge"
-      : `Pixel Recall Journey · Level ${lastResult.level}`;
+      : `Pixel Recall Run · ${lastResult.runPatternsPassed || 0} passed`;
 
   if (lastResult.mode === "daily" && lastResult.dailyIsPracticeReplay && typeof lastResult.dailyOfficialAccuracy === "number") {
     return `${heading} — ${lastResult.accuracy}% accuracy on a practice replay. My official first attempt was ${lastResult.dailyOfficialAccuracy}%. Can you beat me?`;
@@ -2777,6 +3718,10 @@ function shareMessageText() {
 
   if (lastResult.mode === "daily" && typeof lastResult.dailyStreak === "number") {
     return `${heading} — ${lastResult.accuracy}% accuracy · ${lastResult.dailyStreak}-day streak. Can you beat me?`;
+  }
+
+  if (lastResult.mode === "run") {
+    return `${heading} — ${lastResult.accuracy}% on the latest pattern. How many can you pass?`;
   }
 
   return `${heading} — ${lastResult.accuracy}% accuracy. Can you beat me?`;
@@ -3059,6 +4004,7 @@ function setMode(nextMode) {
   localStorage.setItem("pixelRecallMode", mode);
   updateModeButtons();
   buildGrid();
+  if (mode === "run") loadRunLeaderboard();
 }
 
 grid.addEventListener("pointermove", (event) => {
@@ -3145,14 +4091,16 @@ customSizeSelect.addEventListener("change", () => {
 });
 
 dailyModeBtn.addEventListener("click", () => setMode("daily"));
-journeyModeBtn.addEventListener("click", () => setMode("journey"));
+runModeBtn.addEventListener("click", () => setMode("run"));
 customModeBtn.addEventListener("click", () => setMode("custom"));
+submitRunScoreBtn.addEventListener("click", submitCompletedRun);
+refreshRunLeaderboardBtn.addEventListener("click", loadRunLeaderboard);
 scaleDownBtn.addEventListener("click", () => applyUiScale(uiScale - UI_SCALE_STEP));
 scaleResetBtn.addEventListener("click", () => applyUiScale(1));
 scaleUpBtn.addEventListener("click", () => applyUiScale(uiScale + UI_SCALE_STEP));
 window.addEventListener("resize", () => sizeGrid(currentPuzzle()));
 
-console.info("Pixel Recall build: v11-custom-grid-size");
+console.info("Pixel Recall build: v26-progressive-run-longer-preview");
 applyUiScale(uiScale, false);
 updateModeButtons();
 buildGrid();
