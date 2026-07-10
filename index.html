@@ -23,7 +23,7 @@
   <meta name="twitter:image" content="https://pixelrecall.net/og-image.png" />
 
   <link rel="icon" href="icon.svg" type="image/svg+xml" />
-  <link rel="stylesheet" href="style.css?v=v26-progressive-run-longer-preview" />
+  <link rel="stylesheet" href="style.css?v=v27-popup-results-leaderboard" />
 
   <!-- Google tag (gtag.js) -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-20214X136N"></script>
@@ -100,6 +100,45 @@
         Press Start and memorize the pattern.
       </p>
 
+      <div class="controls">
+        <button id="startBtn" type="button">Start</button>
+        <button id="clearBtn" class="secondary" type="button">Clear</button>
+        <button id="checkBtn" class="secondary" type="button">Check</button>
+      </div>
+    </section>
+
+    <section class="legend" aria-label="Result colors">
+      <span><b class="green"></b>Correct</span>
+      <span><b class="red"></b>Extra</span>
+      <span><b class="blue"></b>Missed</span>
+    </section>
+
+    <div id="resultActionRow" class="result-action-row" aria-label="Game actions">
+      <button id="dailyResultsBtn" class="secondary" type="button" hidden>Daily results</button>
+      <button id="shareBtn" class="share-button secondary" type="button" hidden disabled>Share result</button>
+      <button id="runLeaderboardBtn" class="secondary" type="button" hidden>Leaderboard</button>
+      <button id="runSubmitBtn" type="button" hidden>Submit run</button>
+    </div>
+
+  </main>
+
+  <div id="dailyResultsModal" class="share-modal" hidden>
+    <section
+      id="dailyResultsPanel"
+      class="share-panel compact-results-panel"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="dailyResultsTitle"
+      tabindex="-1"
+    >
+      <div class="share-panel-header">
+        <div>
+          <p id="dailyResultsTitle" class="share-panel-title">Daily results</p>
+          <p id="dailyResultSummary" class="share-panel-message">Your result is ready.</p>
+        </div>
+        <button id="closeDailyResultsBtn" class="icon-button" type="button" aria-label="Close Daily results">×</button>
+      </div>
+
       <section id="dailyProgressPanel" class="daily-progress-panel" aria-live="polite" hidden>
         <div class="daily-streak-card">
           <p class="daily-progress-label">Daily streak</p>
@@ -114,47 +153,66 @@
         </div>
       </section>
 
-      <div class="controls">
-        <button id="startBtn" type="button">Start</button>
-        <button id="clearBtn" class="secondary" type="button">Clear</button>
-        <button id="checkBtn" class="secondary" type="button">Check</button>
+      <div class="popup-action-row">
+        <button id="dailyShareBtn" type="button" disabled>Share result</button>
+        <button id="dailyResultsDoneBtn" class="secondary" type="button">Done</button>
       </div>
     </section>
+  </div>
 
-    <section class="legend" aria-label="Result colors">
-      <span><b class="green"></b>Correct</span>
-      <span><b class="red"></b>Extra</span>
-      <span><b class="blue"></b>Missed</span>
-    </section>
-
-    <button id="shareBtn" class="share-button secondary" type="button" disabled>
-      Share result
-    </button>
-
-    <section id="runLeaderboardSection" class="run-leaderboard-section" hidden>
-      <div class="run-leaderboard-header">
+  <div id="runLeaderboardModal" class="share-modal" hidden>
+    <section
+      id="runLeaderboardPanel"
+      class="share-panel run-popup-panel"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="runLeaderboardTitle"
+      tabindex="-1"
+    >
+      <div class="share-panel-header">
         <div>
-          <p class="daily-progress-label">All-time Run leaderboard</p>
-          <h2>Most patterns passed</h2>
+          <p id="runLeaderboardTitle" class="share-panel-title">Run leaderboard</p>
+          <p class="share-panel-message">All-time · Most patterns passed</p>
         </div>
+        <button id="closeRunLeaderboardBtn" class="icon-button" type="button" aria-label="Close Run leaderboard">×</button>
       </div>
 
-      <section id="runSubmitPanel" class="run-submit-panel" hidden>
-        <p class="run-submit-title">Add this run to the leaderboard</p>
+      <section id="runLeaderboardSection" class="run-leaderboard-section modal-content-section">
+        <p id="runLeaderboardStatus" class="daily-progress-note">Loading leaderboard…</p>
+        <ol id="runLeaderboardList" class="run-leaderboard-list"></ol>
+        <button id="refreshRunLeaderboardBtn" class="secondary run-refresh-button" type="button">Refresh leaderboard</button>
+      </section>
+    </section>
+  </div>
+
+  <div id="runSubmitModal" class="share-modal" hidden>
+    <section
+      id="runSubmitDialog"
+      class="share-panel compact-results-panel"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="runSubmitTitle"
+      tabindex="-1"
+    >
+      <div class="share-panel-header">
+        <div>
+          <p id="runSubmitTitle" class="share-panel-title">Submit run</p>
+          <p id="runSubmitSummary" class="share-panel-message">Add your run to the all-time leaderboard.</p>
+        </div>
+        <button id="closeRunSubmitBtn" class="icon-button" type="button" aria-label="Close Run submission">×</button>
+      </div>
+
+      <section id="runSubmitPanel" class="run-submit-panel">
         <label for="runNameInput">Name</label>
         <input id="runNameInput" type="text" autocomplete="nickname" placeholder="Your name" />
         <label for="runMessageInput">Message</label>
         <textarea id="runMessageInput" rows="3" placeholder="Message to the other players"></textarea>
         <button id="submitRunScoreBtn" type="button">Submit run</button>
+        <button id="viewRunLeaderboardBtn" class="secondary" type="button" hidden>View leaderboard</button>
         <p id="runSubmitStatus" class="daily-progress-note" aria-live="polite"></p>
       </section>
-
-      <p id="runLeaderboardStatus" class="daily-progress-note">Loading leaderboard…</p>
-      <ol id="runLeaderboardList" class="run-leaderboard-list"></ol>
-      <button id="refreshRunLeaderboardBtn" class="secondary run-refresh-button" type="button">Refresh leaderboard</button>
     </section>
-
-  </main>
+  </div>
 
   <div id="shareModal" class="share-modal" hidden>
     <section
@@ -233,7 +291,7 @@
     </section>
   </div>
 
-  <script src="backend-config.js?v=v26-progressive-run-longer-preview"></script>
-  <script src="script.js?v=v26-progressive-run-longer-preview"></script>
+  <script src="backend-config.js?v=v27-popup-results-leaderboard"></script>
+  <script src="script.js?v=v29-hide-run-pattern-before-start"></script>
 </body>
 </html>

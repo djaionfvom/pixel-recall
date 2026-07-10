@@ -848,3 +848,76 @@ body.share-modal-open {
     grid-column: 2;
   }
 }
+
+
+/* v27: compact page with Daily results and Run leaderboard/submission popups */
+.result-action-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  width: min(520px, calc(100% - 28px));
+  margin: 14px auto 0;
+}
+
+.result-action-row[hidden],
+.result-action-row button[hidden] {
+  display: none;
+}
+
+.result-action-row button {
+  min-width: 128px;
+}
+
+.compact-results-panel {
+  width: min(600px, 100%);
+}
+
+.run-popup-panel {
+  width: min(700px, 100%);
+}
+
+.popup-action-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.popup-action-row button {
+  width: 100%;
+}
+
+.compact-results-panel .daily-progress-panel {
+  margin: 0;
+}
+
+.modal-content-section.run-leaderboard-section {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+#runSubmitModal .run-submit-panel {
+  margin: 0;
+}
+
+#runSubmitModal .run-submit-panel > button {
+  margin-top: 4px;
+}
+
+@media (max-width: 520px) {
+  .result-action-row {
+    width: min(100%, calc(100% - 20px));
+  }
+
+  .result-action-row button {
+    flex: 1 1 132px;
+  }
+
+  .popup-action-row {
+    grid-template-columns: 1fr;
+  }
+}

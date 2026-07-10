@@ -1562,7 +1562,7 @@ const runProgressionPuzzles = [
     "####.",
     "#####"
   ], 3200),
-  makePuzzle("The Mini U", [
+  makePuzzle("the mini U", [
     "#...#",
     "#...#",
     "#...#",
@@ -2137,6 +2137,10 @@ const startBtn = document.querySelector("#startBtn");
 const clearBtn = document.querySelector("#clearBtn");
 const checkBtn = document.querySelector("#checkBtn");
 const shareBtn = document.querySelector("#shareBtn");
+const resultActionRow = document.querySelector("#resultActionRow");
+const dailyResultsBtn = document.querySelector("#dailyResultsBtn");
+const runLeaderboardBtn = document.querySelector("#runLeaderboardBtn");
+const runSubmitBtn = document.querySelector("#runSubmitBtn");
 const dailyModeBtn = document.querySelector("#dailyModeBtn");
 const runModeBtn = document.querySelector("#runModeBtn");
 const customModeBtn = document.querySelector("#customModeBtn");
@@ -2146,6 +2150,19 @@ const message = document.querySelector("#message");
 const puzzleName = document.querySelector("#puzzleName");
 const levelInfo = document.querySelector("#levelInfo");
 const scoreBox = document.querySelector("#scoreBox");
+const dailyResultsModal = document.querySelector("#dailyResultsModal");
+const dailyResultsPanel = document.querySelector("#dailyResultsPanel");
+const dailyResultSummary = document.querySelector("#dailyResultSummary");
+const closeDailyResultsBtn = document.querySelector("#closeDailyResultsBtn");
+const dailyResultsDoneBtn = document.querySelector("#dailyResultsDoneBtn");
+const dailyShareBtn = document.querySelector("#dailyShareBtn");
+const runLeaderboardModal = document.querySelector("#runLeaderboardModal");
+const runLeaderboardPanel = document.querySelector("#runLeaderboardPanel");
+const closeRunLeaderboardBtn = document.querySelector("#closeRunLeaderboardBtn");
+const runSubmitModal = document.querySelector("#runSubmitModal");
+const runSubmitDialog = document.querySelector("#runSubmitDialog");
+const runSubmitSummary = document.querySelector("#runSubmitSummary");
+const closeRunSubmitBtn = document.querySelector("#closeRunSubmitBtn");
 const shareModal = document.querySelector("#shareModal");
 const sharePanel = document.querySelector("#sharePanel");
 const sharePanelMessage = document.querySelector("#sharePanelMessage");
@@ -2192,6 +2209,7 @@ const runSubmitStatus = document.querySelector("#runSubmitStatus");
 const runLeaderboardStatus = document.querySelector("#runLeaderboardStatus");
 const runLeaderboardList = document.querySelector("#runLeaderboardList");
 const refreshRunLeaderboardBtn = document.querySelector("#refreshRunLeaderboardBtn");
+const viewRunLeaderboardBtn = document.querySelector("#viewRunLeaderboardBtn");
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const DAILY_EPOCH = Date.UTC(2026, 0, 1);
@@ -2253,6 +2271,9 @@ let customBuilderSize = parseCustomGridSize(localStorage.getItem(CUSTOM_SIZE_STO
 let customBuilderActive = !customChallengePuzzle;
 let currentChallengeUrl = "";
 let challengeModalReturnFocus = null;
+let dailyResultsModalReturnFocus = null;
+let runLeaderboardModalReturnFocus = null;
+let runSubmitModalReturnFocus = null;
 
 let mode = customChallengePuzzle ? "custom" : "daily";
 let runSequence = [];
@@ -2536,6 +2557,8 @@ async function handleDailyCompletion(result) {
     streakState,
     backendStatus: backendEnabled() ? "loading" : "disabled"
   });
+  updateResultActions();
+  showDailyResultsModal();
 
   if (!backendEnabled()) return;
 
@@ -2570,6 +2593,92 @@ async function handleDailyCompletion(result) {
       backendStatus: "error"
     });
   }
+}
+
+
+function setShareButtonState(disabled, text) {
+  shareBtn.disabled = disabled;
+  shareBtn.textContent = text;
+  dailyShareBtn.disabled = disabled;
+  dailyShareBtn.textContent = text;
+}
+
+function updateResultActions() {
+  const hasDailyResult = mode === "daily" && lastResult?.mode === "daily";
+  const hasShareableResult = Boolean(lastResult) && mode !== "daily";
+  const canSubmitRun = mode === "run" && Boolean(lastCompletedRun) && runFinished;
+
+  dailyResultsBtn.hidden = !hasDailyResult;
+  shareBtn.hidden = !hasShareableResult;
+  runLeaderboardBtn.hidden = mode !== "run";
+  runSubmitBtn.hidden = !canSubmitRun;
+
+  resultActionRow.hidden = [dailyResultsBtn, shareBtn, runLeaderboardBtn, runSubmitBtn]
+    .every((button) => button.hidden);
+}
+
+function showDailyResultsModal() {
+  if (!lastResult || lastResult.mode !== "daily") return;
+
+  dailyResultSummary.textContent = `${lastResult.accuracy}% accuracy · Correct ${lastResult.correct} · Missed ${lastResult.missed} · Extra ${lastResult.extra}`;
+  dailyResultsModalReturnFocus = document.activeElement instanceof HTMLElement
+    ? document.activeElement
+    : dailyResultsBtn;
+  dailyResultsModal.hidden = false;
+  syncModalBodyLock();
+  dailyResultsPanel.scrollTop = 0;
+  requestAnimationFrame(() => closeDailyResultsBtn.focus());
+}
+
+function hideDailyResultsModal() {
+  if (!dailyResultsModal || dailyResultsModal.hidden) return;
+  dailyResultsModal.hidden = true;
+  syncModalBodyLock();
+  const focusTarget = dailyResultsModalReturnFocus;
+  dailyResultsModalReturnFocus = null;
+  if (focusTarget?.isConnected && !focusTarget.disabled) focusTarget.focus();
+}
+
+function showRunLeaderboardModal() {
+  if (mode !== "run") return;
+  runLeaderboardModalReturnFocus = document.activeElement instanceof HTMLElement
+    ? document.activeElement
+    : runLeaderboardBtn;
+  runLeaderboardModal.hidden = false;
+  syncModalBodyLock();
+  runLeaderboardPanel.scrollTop = 0;
+  loadRunLeaderboard();
+  requestAnimationFrame(() => closeRunLeaderboardBtn.focus());
+}
+
+function hideRunLeaderboardModal() {
+  if (!runLeaderboardModal || runLeaderboardModal.hidden) return;
+  runLeaderboardModal.hidden = true;
+  syncModalBodyLock();
+  const focusTarget = runLeaderboardModalReturnFocus;
+  runLeaderboardModalReturnFocus = null;
+  if (focusTarget?.isConnected && !focusTarget.disabled) focusTarget.focus();
+}
+
+function showRunSubmitModal() {
+  if (!lastCompletedRun) return;
+  runSubmitSummary.textContent = `${lastCompletedRun.patternsPassed} ${lastCompletedRun.patternsPassed === 1 ? "pattern" : "patterns"} passed.`;
+  runSubmitModalReturnFocus = document.activeElement instanceof HTMLElement
+    ? document.activeElement
+    : runSubmitBtn;
+  runSubmitModal.hidden = false;
+  syncModalBodyLock();
+  runSubmitDialog.scrollTop = 0;
+  requestAnimationFrame(() => runNameInput.focus());
+}
+
+function hideRunSubmitModal() {
+  if (!runSubmitModal || runSubmitModal.hidden) return;
+  runSubmitModal.hidden = true;
+  syncModalBodyLock();
+  const focusTarget = runSubmitModalReturnFocus;
+  runSubmitModalReturnFocus = null;
+  if (focusTarget?.isConnected && !focusTarget.disabled) focusTarget.focus();
 }
 
 
@@ -2733,8 +2842,9 @@ function beginRun() {
   runActive = true;
   runFinished = false;
   lastCompletedRun = null;
-  runSubmitPanel.hidden = true;
+  hideRunSubmitModal();
   runSubmitStatus.textContent = "";
+  viewRunLeaderboardBtn.hidden = true;
   submitRunScoreBtn.disabled = false;
   submitRunScoreBtn.textContent = "Submit run";
   updateRunPanel();
@@ -2747,20 +2857,21 @@ function beginRun() {
 }
 
 function updateRunPanel() {
-  const isRun = mode === "run";
   if (runStatusPanel) runStatusPanel.hidden = true;
-  if (runLeaderboardSection) runLeaderboardSection.hidden = !isRun;
+  updateResultActions();
 }
 
 function showRunSubmitPanel() {
   if (!lastCompletedRun) return;
-  runSubmitPanel.hidden = false;
   runNameInput.value = localStorage.getItem(RUN_NAME_STORAGE_KEY) || "";
   runMessageInput.value = "";
+  viewRunLeaderboardBtn.hidden = true;
   runSubmitStatus.textContent = backendEnabled()
-    ? `${lastCompletedRun.patternsPassed} ${lastCompletedRun.patternsPassed === 1 ? "pattern" : "patterns"} passed.`
+    ? "Choose a name and optional message."
     : "Connect Supabase to submit this run.";
   submitRunScoreBtn.disabled = !backendEnabled();
+  updateResultActions();
+  showRunSubmitModal();
 }
 
 async function submitRunScoreToBackend(run) {
@@ -2894,6 +3005,7 @@ async function submitCompletedRun() {
     }
 
     submitRunScoreBtn.textContent = "Submitted";
+    viewRunLeaderboardBtn.hidden = false;
     await loadRunLeaderboard();
   } catch (error) {
     console.warn("Run submission failed.", error);
@@ -3045,6 +3157,17 @@ function currentPuzzle() {
   }
 
   if (mode === "run") {
+    // Do not choose or reveal a Run pattern before the player starts the run.
+    // The neutral 5×5 placeholder keeps the layout stable without leaking a name.
+    if (!runActive) {
+      return {
+        name: "",
+        size: RUN_GRID_STAGES[0].size,
+        time: RUN_PREVIEW_START_MS,
+        cells: []
+      };
+    }
+
     ensureRunSequence();
     return runSequence[runSequenceIndex];
   }
@@ -3096,8 +3219,8 @@ function resetButtons() {
   clearBtn.disabled = true;
   checkBtn.hidden = false;
   checkBtn.disabled = true;
-  shareBtn.disabled = true;
-  shareBtn.textContent = "Share result";
+  setShareButtonState(true, "Share result");
+  updateResultActions();
 }
 
 function buildGrid() {
@@ -3114,12 +3237,14 @@ function buildGrid() {
   preparedShare = null;
   sharePreparationPromise = null;
   hideSharePanel();
+  hideDailyResultsModal();
+  hideRunLeaderboardModal();
+  hideRunSubmitModal();
   if (dailyProgressPanel) dailyProgressPanel.hidden = true;
-  if (runSubmitPanel && !(mode === "run" && runFinished && lastCompletedRun)) runSubmitPanel.hidden = true;
   updateRunPanel();
   scoreBox.textContent = "—";
   puzzleName.textContent = puzzle.name;
-  puzzleName.hidden = mode === "daily";
+  puzzleName.hidden = mode === "daily" || (mode === "run" && !runActive);
   levelInfo.textContent = currentRoundLabel(puzzle);
   customSizeControl.hidden = !isCustomBuilder();
   customSizeSelect.value = String(customBuilderSize);
@@ -3181,7 +3306,6 @@ function buildGrid() {
     message.textContent = runActive
       ? "Press Start and memorize the pattern."
       : `Pass each pattern with at least ${PASS_SCORE}% accuracy. One miss ends the run.`;
-    loadRunLeaderboard();
   } else {
     message.textContent = "Press Start and memorize the pattern.";
   }
@@ -3354,9 +3478,9 @@ function checkAnswer() {
   canDraw = false;
   clearBtn.disabled = true;
   checkBtn.disabled = true;
-  shareBtn.disabled = true;
-  shareBtn.textContent = "Preparing share...";
+  setShareButtonState(true, "Preparing share...");
   startBtn.disabled = false;
+  updateResultActions();
 
   if (resultMode === "daily") {
     startBtn.textContent = "Try Again";
@@ -3630,14 +3754,12 @@ async function prepareShareAsset() {
       const filename = filenameForResult();
       const file = new File([blob], filename, { type: "image/png" });
       preparedShare = { blob, file, filename };
-      shareBtn.disabled = false;
-      shareBtn.textContent = "Share result";
+      setShareButtonState(false, "Share result");
       return preparedShare;
     } catch (error) {
       console.error("Share image preparation failed.", error);
       if (lastResult === resultBeingPrepared) {
-        shareBtn.disabled = false;
-        shareBtn.textContent = "Try image again";
+        setShareButtonState(false, "Try image again");
         message.textContent = "The result image was not ready. Press the button to try again.";
       }
       return null;
@@ -3777,8 +3899,7 @@ async function shareResult() {
   if (!lastResult) return;
 
   if (!preparedShare) {
-    shareBtn.disabled = true;
-    shareBtn.textContent = "Preparing image...";
+    setShareButtonState(true, "Preparing image...");
 
     const asset = await withTimeout(
       prepareShareAsset(),
@@ -3789,8 +3910,7 @@ async function shareResult() {
       return null;
     });
 
-    shareBtn.disabled = false;
-    shareBtn.textContent = "Share result";
+    setShareButtonState(false, "Share result");
 
     if (!asset) {
       message.textContent = "The result image could not be prepared. Press Share result to try again.";
@@ -3898,7 +4018,13 @@ function downloadPreparedImage() {
 }
 
 function syncModalBodyLock() {
-  const modalOpen = (shareModal && !shareModal.hidden) || (challengeModal && !challengeModal.hidden);
+  const modalOpen = [
+    shareModal,
+    challengeModal,
+    dailyResultsModal,
+    runLeaderboardModal,
+    runSubmitModal
+  ].some((modal) => modal && !modal.hidden);
   document.body.classList.toggle("share-modal-open", Boolean(modalOpen));
 }
 
@@ -3984,6 +4110,15 @@ async function shareCustomChallengeLink() {
 }
 
 function activeModalState() {
+  if (runSubmitModal && !runSubmitModal.hidden) {
+    return { modal: runSubmitModal, panel: runSubmitDialog, close: hideRunSubmitModal };
+  }
+  if (runLeaderboardModal && !runLeaderboardModal.hidden) {
+    return { modal: runLeaderboardModal, panel: runLeaderboardPanel, close: hideRunLeaderboardModal };
+  }
+  if (dailyResultsModal && !dailyResultsModal.hidden) {
+    return { modal: dailyResultsModal, panel: dailyResultsPanel, close: hideDailyResultsModal };
+  }
   if (challengeModal && !challengeModal.hidden) {
     return { modal: challengeModal, panel: challengePanel, close: hideChallengePanel };
   }
@@ -4004,7 +4139,6 @@ function setMode(nextMode) {
   localStorage.setItem("pixelRecallMode", mode);
   updateModeButtons();
   buildGrid();
-  if (mode === "run") loadRunLeaderboard();
 }
 
 grid.addEventListener("pointermove", (event) => {
@@ -4033,12 +4167,28 @@ startBtn.addEventListener("click", startGame);
 clearBtn.addEventListener("click", clearDrawing);
 checkBtn.addEventListener("click", checkAnswer);
 shareBtn.addEventListener("click", shareResult);
+dailyResultsBtn.addEventListener("click", showDailyResultsModal);
+dailyShareBtn.addEventListener("click", async () => {
+  hideDailyResultsModal();
+  if (!dailyResultsBtn.hidden) dailyResultsBtn.focus();
+  await shareResult();
+});
+runLeaderboardBtn.addEventListener("click", showRunLeaderboardModal);
+runSubmitBtn.addEventListener("click", showRunSubmitPanel);
+viewRunLeaderboardBtn.addEventListener("click", () => {
+  hideRunSubmitModal();
+  showRunLeaderboardModal();
+});
 nativeImageShareBtn.addEventListener("click", nativeSharePreparedImage);
 copyLinkBtn.addEventListener("click", copyShareLink);
 copyImageBtn.addEventListener("click", copyPreparedImage);
 downloadImageBtn.addEventListener("click", downloadPreparedImage);
 closeSharePanelBtn.addEventListener("click", hideSharePanel);
 closeChallengePanelBtn.addEventListener("click", hideChallengePanel);
+closeDailyResultsBtn.addEventListener("click", hideDailyResultsModal);
+dailyResultsDoneBtn.addEventListener("click", hideDailyResultsModal);
+closeRunLeaderboardBtn.addEventListener("click", hideRunLeaderboardModal);
+closeRunSubmitBtn.addEventListener("click", hideRunSubmitModal);
 copyChallengeLinkBtn.addEventListener("click", copyCustomChallengeLink);
 shareChallengeLinkBtn.addEventListener("click", shareCustomChallengeLink);
 challengeLinkInput.addEventListener("focus", () => challengeLinkInput.select());
@@ -4047,6 +4197,15 @@ shareModal.addEventListener("click", (event) => {
 });
 challengeModal.addEventListener("click", (event) => {
   if (event.target === challengeModal) hideChallengePanel();
+});
+dailyResultsModal.addEventListener("click", (event) => {
+  if (event.target === dailyResultsModal) hideDailyResultsModal();
+});
+runLeaderboardModal.addEventListener("click", (event) => {
+  if (event.target === runLeaderboardModal) hideRunLeaderboardModal();
+});
+runSubmitModal.addEventListener("click", (event) => {
+  if (event.target === runSubmitModal) hideRunSubmitModal();
 });
 
 document.addEventListener("keydown", (event) => {
@@ -4100,7 +4259,7 @@ scaleResetBtn.addEventListener("click", () => applyUiScale(1));
 scaleUpBtn.addEventListener("click", () => applyUiScale(uiScale + UI_SCALE_STEP));
 window.addEventListener("resize", () => sizeGrid(currentPuzzle()));
 
-console.info("Pixel Recall build: v26-progressive-run-longer-preview");
+console.info("Pixel Recall build: v27-popup-results-leaderboard");
 applyUiScale(uiScale, false);
 updateModeButtons();
 buildGrid();

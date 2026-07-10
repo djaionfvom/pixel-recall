@@ -1,4 +1,4 @@
-# Pixel Recall v26 — progressive Run + longer previews
+# Pixel Recall v27 — Popup Results and Leaderboard
 
 This build keeps the compact v25 design and changes only the requested gameplay/leaderboard behavior.
 
@@ -30,3 +30,24 @@ This build keeps the compact v25 design and changes only the requested gameplay/
 ## Backend
 
 This version uses the same Run leaderboard table/functions as v24/v25. If that schema is already installed in Supabase, no SQL rerun is required. New installations can run `backend/supabase-schema.sql`.
+
+
+## v27 interface changes
+
+- Daily streak, community distribution, percentile text and Share result are now in a Daily Results popup.
+- The Daily Results popup opens automatically after checking the Daily and can be reopened with the compact Daily results button.
+- The all-time Run leaderboard is now a popup opened with the Leaderboard button.
+- Run name/message submission is now a separate popup shown when a run ends; it can also be reopened with Submit run.
+- Long Daily and Run sections were removed from below the game grid, reducing page scrolling.
+- Daily scoring, first-attempt backend rules, Run progression, randomized sequences and Supabase schema are unchanged.
+
+
+## v28 label fix
+- Renamed the Run pattern display label from `The Mini U` to `the mini U`.
+
+
+## v29 fix
+
+- Run mode no longer selects or displays a pattern name before the player presses **Start Run**.
+- A neutral empty 5×5 grid is used before the run begins.
+- The first randomized pattern is generated only when the run actually starts.
