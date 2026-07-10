@@ -2222,7 +2222,7 @@ const DAILY_STREAK_STORAGE_KEY = "pixelRecallDailyStreakV1";
 const ANONYMOUS_USER_STORAGE_KEY = "pixelRecallAnonymousUserIdV1";
 const RUN_BEST_STORAGE_KEY = "pixelRecallRunBestV1";
 const RUN_NAME_STORAGE_KEY = "pixelRecallRunNameV1";
-const RUN_LEADERBOARD_LIMIT = 50;
+const RUN_LEADERBOARD_LIMIT = 20;
 const RUN_SEQUENCE_LENGTH = 120;
 const RUN_PREVIEW_START_MS = 3200;
 const RUN_PREVIEW_MIN_MS = 2000;
@@ -2281,6 +2281,7 @@ let runSequenceIndex = 0;
 let runSequenceCycle = 0;
 let runPassed = 0;
 let runBest = Math.max(0, Number(localStorage.getItem(RUN_BEST_STORAGE_KEY)) || 0);
+let runBestAtRunStart = runBest;
 let runActive = false;
 let runFinished = false;
 let runId = "";
@@ -2334,6 +2335,168 @@ function trackEvent(name, parameters = {}) {
 
 function backendEnabled() {
   return /^https:\/\//.test(SUPABASE_URL) && SUPABASE_ANON_KEY.length > 20;
+}
+
+let celebrationAnimationFrame = null;
+let celebrationCanvas = null;
+let celebrationToast = null;
+
+function prefersReducedMotion() {
+  return window.matchMedia?.("(prefers-reduced-motion: reduce)").matches === true;
+}
+
+function ensureCelebrationElements() {
+  if (!celebrationCanvas) {
+    celebrationCanvas = document.createElement("canvas");
+    celebrationCanvas.className = "celebration-canvas";
+    celebrationCanvas.setAttribute("aria-hidden", "true");
+    document.body.appendChild(celebrationCanvas);
+  }
+
+  if (!celebrationToast) {
+    celebrationToast = document.createElement("div");
+    celebrationToast.className = "achievement-toast";
+    celebrationToast.setAttribute("role", "status");
+    celebrationToast.setAttribute("aria-live", "polite");
+    document.body.appendChild(celebrationToast);
+  }
+
+  return { canvas: celebrationCanvas, toast: celebrationToast };
+}
+
+function showAchievementToast(title, detail = "") {
+  const { toast } = ensureCelebrationElements();
+  toast.replaceChildren();
+
+  const strong = document.createElement("strong");
+  strong.textContent = title;
+  toast.appendChild(strong);
+
+  if (detail) {
+    const small = document.createElement("span");
+    small.textContent = detail;
+    toast.appendChild(small);
+  }
+
+  toast.classList.remove("show");
+  void toast.offsetWidth;
+  toast.classList.add("show");
+  window.setTimeout(() => toast.classList.remove("show"), 2800);
+}
+
+function celebrateAchievement(title, detail = "") {
+  showAchievementToast(title, detail);
+  if (prefersReducedMotion()) return;
+
+  const { canvas } = ensureCelebrationElements();
+  const context = canvas.getContext("2d");
+  if (!context) return;
+
+  if (celebrationAnimationFrame) cancelAnimationFrame(celebrationAnimationFrame);
+
+  const pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
+  const width = window.innerWidth;
+  const height = window.innerHeight;
+  canvas.width = Math.max(1, Math.floor(width * pixelRatio));
+  canvas.height = Math.max(1, Math.floor(height * pixelRatio));
+  canvas.style.width = `${width}px`;
+  canvas.style.height = `${height}px`;
+  context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+  canvas.classList.add("active");
+
+  const colors = ["#f3c969", "#47d18c", "#5fa8ff", "#ff637d", "#f7f7fb", "#9f7aea"];
+  const particles = [];
+  const particleCount = Math.min(190, Math.max(120, Math.floor(width / 6)));
+
+  function addBurst(originX, direction) {
+    const count = Math.floor(particleCount / 2);
+    for (let index = 0; index < count; index += 1) {
+      const speed = 8 + Math.random() * 11;
+      const angle = (-Math.PI / 2) + direction * (0.18 + Math.random() * 0.72);
+      particles.push({
+        x: originX,
+        y: height * (0.72 + Math.random() * 0.08),
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed - Math.random() * 2,
+        gravity: 0.19 + Math.random() * 0.08,
+        drag: 0.992,
+        rotation: Math.random() * Math.PI * 2,
+        rotationSpeed: (Math.random() - 0.5) * 0.28,
+        width: 6 + Math.random() * 7,
+        height: 3 + Math.random() * 5,
+        color: colors[Math.floor(Math.random() * colors.length)],
+        shape: Math.random() > 0.78 ? "circle" : "rect",
+        opacity: 1,
+        life: 115 + Math.floor(Math.random() * 45)
+      });
+    }
+  }
+
+  addBurst(width * 0.08, 1);
+  addBurst(width * 0.92, -1);
+
+  const startedAt = performance.now();
+
+  function drawFrame(now) {
+    context.clearRect(0, 0, width, height);
+    let alive = 0;
+
+    particles.forEach((particle) => {
+      if (particle.life <= 0 || particle.opacity <= 0) return;
+      alive += 1;
+      particle.life -= 1;
+      particle.vx *= particle.drag;
+      particle.vy = particle.vy * particle.drag + particle.gravity;
+      particle.x += particle.vx;
+      particle.y += particle.vy;
+      particle.rotation += particle.rotationSpeed;
+
+      if (particle.life < 35) particle.opacity = Math.max(0, particle.life / 35);
+
+      context.save();
+      context.globalAlpha = particle.opacity;
+      context.translate(particle.x, particle.y);
+      context.rotate(particle.rotation);
+      context.fillStyle = particle.color;
+
+      if (particle.shape === "circle") {
+        context.beginPath();
+        context.arc(0, 0, particle.width * 0.45, 0, Math.PI * 2);
+        context.fill();
+      } else {
+        context.fillRect(-particle.width / 2, -particle.height / 2, particle.width, particle.height);
+      }
+
+      context.restore();
+    });
+
+    if (alive > 0 && now - startedAt < 3600) {
+      celebrationAnimationFrame = requestAnimationFrame(drawFrame);
+    } else {
+      context.clearRect(0, 0, width, height);
+      canvas.classList.remove("active");
+      celebrationAnimationFrame = null;
+    }
+  }
+
+  celebrationAnimationFrame = requestAnimationFrame(drawFrame);
+}
+
+function submittedRunMadeTop20(run, submission, rows) {
+  if (!run || submission?.accepted === false || !Array.isArray(rows)) return false;
+  if (rows.length < RUN_LEADERBOARD_LIMIT) return true;
+
+  const cutoff = rows[RUN_LEADERBOARD_LIMIT - 1];
+  if (!cutoff) return true;
+
+  const runScore = Number(run.patternsPassed) || 0;
+  const cutoffScore = Number(cutoff.patterns_passed) || 0;
+  if (runScore > cutoffScore) return true;
+  if (runScore < cutoffScore) return false;
+
+  const submittedAt = Date.parse(submission?.submitted_at || "");
+  const cutoffAt = Date.parse(cutoff.created_at || "");
+  return Number.isFinite(submittedAt) && Number.isFinite(cutoffAt) && submittedAt <= cutoffAt;
 }
 
 function getAnonymousUserId() {
@@ -2833,6 +2996,7 @@ function ensureRunSequence() {
 }
 
 function beginRun() {
+  runBestAtRunStart = runBest;
   runId = randomToken("run");
   runSeed = randomToken("seed");
   runSequenceCycle = 0;
@@ -2927,7 +3091,9 @@ function renderRunLeaderboard(rows) {
     return;
   }
 
-  runLeaderboardStatus.textContent = `${rows.length} ${rows.length === 1 ? "run" : "runs"} shown.`;
+  runLeaderboardStatus.textContent = rows.length >= RUN_LEADERBOARD_LIMIT
+    ? "Top 20 all-time runs."
+    : `${rows.length} ${rows.length === 1 ? "run" : "runs"} shown.`;
 
   rows.forEach((row, index) => {
     const item = document.createElement("li");
@@ -3006,7 +3172,19 @@ async function submitCompletedRun() {
 
     submitRunScoreBtn.textContent = "Submitted";
     viewRunLeaderboardBtn.hidden = false;
-    await loadRunLeaderboard();
+
+    try {
+      const leaderboardRows = await fetchRunLeaderboard();
+      renderRunLeaderboard(leaderboardRows);
+      if (submittedRunMadeTop20(lastCompletedRun, result, leaderboardRows)) {
+        celebrateAchievement("Top 20!", "Your run made the all-time leaderboard.");
+        trackEvent("run_top_20_achieved", {
+          patterns_passed: lastCompletedRun.patternsPassed
+        });
+      }
+    } catch (leaderboardError) {
+      console.warn("Leaderboard refresh after submission failed.", leaderboardError);
+    }
   } catch (error) {
     console.warn("Run submission failed.", error);
     runSubmitStatus.textContent = "Could not submit this run yet.";
@@ -3185,9 +3363,10 @@ function currentRoundLabel(puzzle) {
   }
 
   if (mode === "run") {
-    if (runFinished) return `Run over · ${runPassed} passed`;
-    if (runActive && runPassed > 0) return `Run · ${runPassed} passed`;
-    return "Run";
+    const personalBest = `Personal best: ${runBest}`;
+    if (runFinished) return `Run over · ${runPassed} passed · ${personalBest}`;
+    if (runActive && runPassed > 0) return `Run · ${runPassed} passed · ${personalBest}`;
+    return `Run · ${personalBest}`;
   }
 
   return "Pixel Recall";
@@ -3511,6 +3690,7 @@ function checkAnswer() {
     } else {
       runActive = false;
       runFinished = true;
+      const isNewPersonalBest = runPassed > runBestAtRunStart;
       runBest = Math.max(runBest, runPassed);
       localStorage.setItem(RUN_BEST_STORAGE_KEY, String(runBest));
       lastResult.runPatternsPassed = runPassed;
@@ -3519,11 +3699,18 @@ function checkAnswer() {
         runSeed,
         patternsPassed: runPassed,
         patternsAttempted: runPassed + 1,
+        isNewPersonalBest,
         finishedAt: new Date().toISOString()
       };
       startBtn.textContent = "Start New Run";
       levelInfo.textContent = currentRoundLabel(puzzle);
       showRunSubmitPanel();
+      if (isNewPersonalBest) {
+        celebrateAchievement("New personal best!", `${runPassed} ${runPassed === 1 ? "pattern" : "patterns"} passed.`);
+        trackEvent("run_personal_best", {
+          patterns_passed: runPassed
+        });
+      }
       trackEvent("run_completed", {
         patterns_passed: runPassed,
         final_accuracy: accuracy,
@@ -4259,7 +4446,7 @@ scaleResetBtn.addEventListener("click", () => applyUiScale(1));
 scaleUpBtn.addEventListener("click", () => applyUiScale(uiScale + UI_SCALE_STEP));
 window.addEventListener("resize", () => sizeGrid(currentPuzzle()));
 
-console.info("Pixel Recall build: v27-popup-results-leaderboard");
+console.info("Pixel Recall build: v31-top20-confetti");
 applyUiScale(uiScale, false);
 updateModeButtons();
 buildGrid();

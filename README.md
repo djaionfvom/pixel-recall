@@ -51,3 +51,19 @@ This version uses the same Run leaderboard table/functions as v24/v25. If that s
 - Run mode no longer selects or displays a pattern name before the player presses **Start Run**.
 - A neutral empty 5×5 grid is used before the run begins.
 - The first randomized pattern is generated only when the run actually starts.
+
+
+## v30 personal Run high score
+
+- Added the locally stored personal Run high score to the existing compact Run status line.
+- It appears before a run, during a run, and after a run.
+- No gameplay, leaderboard, backend, styling, or Daily behavior changed.
+
+
+## v31 top 20 + celebration
+
+- The all-time Run leaderboard now requests and displays only the top 20 entries.
+- A confetti burst and achievement toast appear when a run sets a new local personal best.
+- A second celebration appears after submission when the run qualifies for the all-time top 20.
+- Reduced-motion preferences are respected.
+- No backend schema changes are required.
