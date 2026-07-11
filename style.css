@@ -12,6 +12,8 @@
   --ui-scale: 1;
 }
 
+html { scrollbar-gutter: stable; }
+
 * { box-sizing: border-box; }
 
 body {

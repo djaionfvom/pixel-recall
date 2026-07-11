@@ -67,3 +67,12 @@ This version uses the same Run leaderboard table/functions as v24/v25. If that s
 - A second celebration appears after submission when the run qualifies for the all-time top 20.
 - Reduced-motion preferences are respected.
 - No backend schema changes are required.
+
+## v33 Run result flow fix
+
+- A failed Run now leaves the colored result visible for 1.8 seconds before opening the leaderboard-submission popup.
+- The submission popup no longer auto-focuses the name field, preventing mobile keyboard/viewport distortion.
+- Closing either Run popup explicitly restores the completed pattern, accuracy, result colors, message, and Start New Run button.
+- Modal transitions no longer briefly focus a hidden control.
+- Added stable scrollbar spacing to prevent horizontal layout jumps when popups open or close.
+- No gameplay, scoring, leaderboard, Daily, Challenge, or Supabase schema changes.

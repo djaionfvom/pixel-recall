@@ -2249,6 +2249,7 @@ const DAILY_DISTRIBUTION_BUCKETS = [
 const BACKEND_CONFIG = window.PIXEL_RECALL_BACKEND || {};
 const SUPABASE_URL = (BACKEND_CONFIG.SUPABASE_URL || "").replace(/\/$/, "");
 const SUPABASE_ANON_KEY = BACKEND_CONFIG.SUPABASE_ANON_KEY || "";
+const RUN_SUBMIT_AUTO_OPEN_DELAY_MS = 1800;
 
 function parseCustomGridSize(value, fallback = CUSTOM_DEFAULT_SIZE) {
   const parsed = Number.parseInt(value, 10);
@@ -2274,6 +2275,7 @@ let challengeModalReturnFocus = null;
 let dailyResultsModalReturnFocus = null;
 let runLeaderboardModalReturnFocus = null;
 let runSubmitModalReturnFocus = null;
+let runSubmitAutoOpenTimer = null;
 
 let mode = customChallengePuzzle ? "custom" : "daily";
 let runSequence = [];
@@ -2802,10 +2804,60 @@ function hideDailyResultsModal() {
   if (focusTarget?.isConnected && !focusTarget.disabled) focusTarget.focus();
 }
 
+function cancelRunSubmitAutoOpen() {
+  if (runSubmitAutoOpenTimer !== null) {
+    clearTimeout(runSubmitAutoOpenTimer);
+    runSubmitAutoOpenTimer = null;
+  }
+}
+
+function restoreRunResultView() {
+  if (mode !== "run" || !runFinished || lastResult?.mode !== "run") return;
+
+  scoreBox.textContent = `${lastResult.accuracy}%`;
+  puzzleName.textContent = lastResult.puzzleName;
+  puzzleName.hidden = false;
+  levelInfo.textContent = currentRoundLabel();
+  message.textContent = `Correct: ${lastResult.correct} · Missed: ${lastResult.missed} · Extra: ${lastResult.extra}`;
+
+  const cells = [...grid.querySelectorAll(".cell")];
+  if (cells.length === lastResult.cellStates.length) {
+    cells.forEach((cell, index) => {
+      cell.className = "cell locked";
+      const state = lastResult.cellStates[index];
+      if (state && state !== "empty") cell.classList.add(state);
+    });
+  }
+
+  grid.classList.remove("drawing-active");
+  canDraw = false;
+  isDrawing = false;
+  activePointerId = null;
+  startBtn.hidden = false;
+  startBtn.disabled = false;
+  startBtn.textContent = "Start New Run";
+  clearBtn.hidden = false;
+  clearBtn.disabled = true;
+  checkBtn.hidden = false;
+  checkBtn.disabled = true;
+  updateResultActions();
+}
+
+function scheduleRunSubmitPanel() {
+  cancelRunSubmitAutoOpen();
+  runSubmitAutoOpenTimer = setTimeout(() => {
+    runSubmitAutoOpenTimer = null;
+    if (mode === "run" && runFinished && lastCompletedRun) {
+      showRunSubmitPanel();
+    }
+  }, RUN_SUBMIT_AUTO_OPEN_DELAY_MS);
+}
+
 function showRunLeaderboardModal() {
   if (mode !== "run") return;
-  runLeaderboardModalReturnFocus = document.activeElement instanceof HTMLElement
-    ? document.activeElement
+  const activeElement = document.activeElement;
+  runLeaderboardModalReturnFocus = activeElement instanceof HTMLElement && !runSubmitModal.contains(activeElement)
+    ? activeElement
     : runLeaderboardBtn;
   runLeaderboardModal.hidden = false;
   syncModalBodyLock();
@@ -2814,17 +2866,27 @@ function showRunLeaderboardModal() {
   requestAnimationFrame(() => closeRunLeaderboardBtn.focus());
 }
 
-function hideRunLeaderboardModal() {
+function hideRunLeaderboardModal({ restoreFocus = true } = {}) {
   if (!runLeaderboardModal || runLeaderboardModal.hidden) return;
   runLeaderboardModal.hidden = true;
   syncModalBodyLock();
+  restoreRunResultView();
+
   const focusTarget = runLeaderboardModalReturnFocus;
   runLeaderboardModalReturnFocus = null;
-  if (focusTarget?.isConnected && !focusTarget.disabled) focusTarget.focus();
+  if (restoreFocus) {
+    requestAnimationFrame(() => {
+      const target = focusTarget?.isConnected && !focusTarget.disabled && !focusTarget.closest("[hidden]")
+        ? focusTarget
+        : startBtn;
+      target?.focus?.({ preventScroll: true });
+    });
+  }
 }
 
 function showRunSubmitModal() {
   if (!lastCompletedRun) return;
+  cancelRunSubmitAutoOpen();
   runSubmitSummary.textContent = `${lastCompletedRun.patternsPassed} ${lastCompletedRun.patternsPassed === 1 ? "pattern" : "patterns"} passed.`;
   runSubmitModalReturnFocus = document.activeElement instanceof HTMLElement
     ? document.activeElement
@@ -2832,16 +2894,28 @@ function showRunSubmitModal() {
   runSubmitModal.hidden = false;
   syncModalBodyLock();
   runSubmitDialog.scrollTop = 0;
-  requestAnimationFrame(() => runNameInput.focus());
+
+  // Keep the on-screen result stable on phones: focusing the text input here
+  // would open the keyboard immediately and resize/scroll the viewport.
+  requestAnimationFrame(() => closeRunSubmitBtn.focus({ preventScroll: true }));
 }
 
-function hideRunSubmitModal() {
+function hideRunSubmitModal({ restoreFocus = true, restoreResult = true } = {}) {
   if (!runSubmitModal || runSubmitModal.hidden) return;
   runSubmitModal.hidden = true;
   syncModalBodyLock();
+  if (restoreResult) restoreRunResultView();
+
   const focusTarget = runSubmitModalReturnFocus;
   runSubmitModalReturnFocus = null;
-  if (focusTarget?.isConnected && !focusTarget.disabled) focusTarget.focus();
+  if (restoreFocus) {
+    requestAnimationFrame(() => {
+      const target = focusTarget?.isConnected && !focusTarget.disabled && !focusTarget.closest("[hidden]")
+        ? focusTarget
+        : startBtn;
+      target?.focus?.({ preventScroll: true });
+    });
+  }
 }
 
 
@@ -2996,6 +3070,7 @@ function ensureRunSequence() {
 }
 
 function beginRun() {
+  cancelRunSubmitAutoOpen();
   runBestAtRunStart = runBest;
   runId = randomToken("run");
   runSeed = randomToken("seed");
@@ -3404,6 +3479,7 @@ function resetButtons() {
 
 function buildGrid() {
   clearTimeout(previewTimer);
+  cancelRunSubmitAutoOpen();
   const puzzle = currentPuzzle();
 
   selected.clear();
@@ -3704,7 +3780,7 @@ function checkAnswer() {
       };
       startBtn.textContent = "Start New Run";
       levelInfo.textContent = currentRoundLabel(puzzle);
-      showRunSubmitPanel();
+      scheduleRunSubmitPanel();
       if (isNewPersonalBest) {
         celebrateAchievement("New personal best!", `${runPassed} ${runPassed === 1 ? "pattern" : "patterns"} passed.`);
         trackEvent("run_personal_best", {
@@ -4363,7 +4439,7 @@ dailyShareBtn.addEventListener("click", async () => {
 runLeaderboardBtn.addEventListener("click", showRunLeaderboardModal);
 runSubmitBtn.addEventListener("click", showRunSubmitPanel);
 viewRunLeaderboardBtn.addEventListener("click", () => {
-  hideRunSubmitModal();
+  hideRunSubmitModal({ restoreFocus: false, restoreResult: false });
   showRunLeaderboardModal();
 });
 nativeImageShareBtn.addEventListener("click", nativeSharePreparedImage);
