@@ -2811,6 +2811,46 @@ function cancelRunSubmitAutoOpen() {
   }
 }
 
+function resultGridPuzzle() {
+  if (mode === "run" && runFinished && lastResult?.mode === "run" && Number.isInteger(lastResult.size)) {
+    return {
+      name: lastResult.puzzleName || "",
+      size: lastResult.size,
+      time: 0,
+      cells: []
+    };
+  }
+
+  return currentPuzzle();
+}
+
+function rebuildLockedResultCells(result) {
+  const expectedCellCount = result.size * result.size;
+  let cells = [...grid.querySelectorAll(".cell")];
+
+  // Recreate the locked result grid if another UI flow changed its contents.
+  // This also makes restoration reliable for every Run grid size.
+  if (cells.length !== expectedCellCount) {
+    grid.innerHTML = "";
+    const fragment = document.createDocumentFragment();
+    for (let index = 0; index < expectedCellCount; index++) {
+      const cell = document.createElement("div");
+      cell.className = "cell locked";
+      cell.dataset.index = String(index);
+      cell.setAttribute("aria-hidden", "true");
+      fragment.appendChild(cell);
+    }
+    grid.appendChild(fragment);
+    cells = [...grid.querySelectorAll(".cell")];
+  }
+
+  cells.forEach((cell, index) => {
+    cell.className = "cell locked";
+    const state = result.cellStates[index];
+    if (state && state !== "empty") cell.classList.add(state);
+  });
+}
+
 function restoreRunResultView() {
   if (mode !== "run" || !runFinished || lastResult?.mode !== "run") return;
 
@@ -2820,14 +2860,14 @@ function restoreRunResultView() {
   levelInfo.textContent = currentRoundLabel();
   message.textContent = `Correct: ${lastResult.correct} · Missed: ${lastResult.missed} · Extra: ${lastResult.extra}`;
 
-  const cells = [...grid.querySelectorAll(".cell")];
-  if (cells.length === lastResult.cellStates.length) {
-    cells.forEach((cell, index) => {
-      cell.className = "cell locked";
-      const state = lastResult.cellStates[index];
-      if (state && state !== "empty") cell.classList.add(state);
-    });
-  }
+  rebuildLockedResultCells(lastResult);
+
+  // A phone keyboard/modal resize used to call sizeGrid(currentPuzzle()).
+  // Because a finished Run is no longer active, currentPuzzle() returns the
+  // neutral 5×5 placeholder. Always size the visible result from its stored
+  // size instead, whether it was 5×5, 8×8, 13×13, or any future size.
+  sizeGrid(resultGridPuzzle());
+  requestAnimationFrame(() => sizeGrid(resultGridPuzzle()));
 
   grid.classList.remove("drawing-active");
   canDraw = false;
@@ -4520,9 +4560,14 @@ refreshRunLeaderboardBtn.addEventListener("click", loadRunLeaderboard);
 scaleDownBtn.addEventListener("click", () => applyUiScale(uiScale - UI_SCALE_STEP));
 scaleResetBtn.addEventListener("click", () => applyUiScale(1));
 scaleUpBtn.addEventListener("click", () => applyUiScale(uiScale + UI_SCALE_STEP));
-window.addEventListener("resize", () => sizeGrid(currentPuzzle()));
+function resizeVisibleGrid() {
+  requestAnimationFrame(() => sizeGrid(resultGridPuzzle()));
+}
 
-console.info("Pixel Recall build: v31-top20-confetti");
+window.addEventListener("resize", resizeVisibleGrid);
+window.visualViewport?.addEventListener("resize", resizeVisibleGrid);
+
+console.info("Pixel Recall build: v34-mobile-run-grid-restore");
 applyUiScale(uiScale, false);
 updateModeButtons();
 buildGrid();

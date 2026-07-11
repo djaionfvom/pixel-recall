@@ -76,3 +76,13 @@ This version uses the same Run leaderboard table/functions as v24/v25. If that s
 - Modal transitions no longer briefly focus a hidden control.
 - Added stable scrollbar spacing to prevent horizontal layout jumps when popups open or close.
 - No gameplay, scoring, leaderboard, Daily, Challenge, or Supabase schema changes.
+
+
+## v34 mobile Run result-grid restoration
+
+- Fixes the failed Run result grid changing columns after the submission/leaderboard popup on phones.
+- The visible result is now always sized from the stored failed pattern size, not the inactive Run placeholder.
+- Applies to every grid size, including 5×5 through 13×13.
+- Rebuilds the locked result cells if a popup/UI flow altered the grid contents.
+- Handles normal window resizes and mobile visual-viewport/keyboard resizes.
+- No gameplay, patterns, scoring, leaderboard, Daily, Challenge, or backend changes.
