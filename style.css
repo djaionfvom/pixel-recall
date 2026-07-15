@@ -336,16 +336,11 @@ button:disabled {
 .red { background: var(--extra); }
 .blue { background: var(--missed); }
 
-.share-button,
-#runLeaderboardBtn {
+.share-button {
   width: 100%;
   margin-top: 18px;
   padding: 14px 22px;
   border: 1px solid rgba(255, 255, 255, .08);
-}
-
-#runLeaderboardBtn {
-  flex: 1 0 100%;
 }
 
 @media (max-width: 420px) {
@@ -996,20 +991,4 @@ body.share-modal-open {
     transition: opacity 120ms ease;
     transform: translate(-50%, 0);
   }
-}
-
-/* Run actions: Share and Leaderboard side by side */
-.result-action-row #shareBtn,
-.result-action-row #runLeaderboardBtn {
-  flex: 1 1 calc(50% - 5px);
-  width: auto;
-  min-width: 0;
-  margin: 0;
-}
-
-/* Submission remains on its own row when visible */
-.result-action-row #runSubmitBtn {
-  flex: 1 0 100%;
-  width: 100%;
-  margin: 0;
 }
