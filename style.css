@@ -336,11 +336,16 @@ button:disabled {
 .red { background: var(--extra); }
 .blue { background: var(--missed); }
 
-.share-button {
+.share-button,
+#runLeaderboardBtn {
   width: 100%;
   margin-top: 18px;
   padding: 14px 22px;
   border: 1px solid rgba(255, 255, 255, .08);
+}
+
+#runLeaderboardBtn {
+  flex: 1 0 100%;
 }
 
 @media (max-width: 420px) {

@@ -86,3 +86,15 @@ This version uses the same Run leaderboard table/functions as v24/v25. If that s
 - Rebuilds the locked result cells if a popup/UI flow altered the grid contents.
 - Handles normal window resizes and mobile visual-viewport/keyboard resizes.
 - No gameplay, patterns, scoring, leaderboard, Daily, Challenge, or backend changes.
+
+## v35 randomized curated Run
+
+- Daily mode and all 365 Daily patterns are unchanged.
+- Replaced the Run-only library with 230 simplified, recognizable silhouettes across 5×5 through 13×13 grids.
+- Expanded the early 5×5, 6×6, and 7×7 pools so new runs do not keep opening with the same few patterns.
+- Every new Run now uses fresh browser entropy and rejects a starting prefix that is too similar to the previous Run.
+- Recently shown Run patterns are deprioritized across sessions.
+- Consecutive patterns avoid repeating the same concept or category where the pool allows it.
+- Grid size and preview-time progression are unchanged; visual complexity is softly ordered inside each short size block.
+- The Run Leaderboard button now uses the same full-width dimensions as Share result.
+- Daily, Challenge, scoring, 80% pass threshold, result restoration, leaderboard, confetti, and Supabase schema are unchanged.
