@@ -650,6 +650,17 @@ body.share-modal-open {
   font-weight: 800;
 }
 
+/* Header for Score / Players */
+.daily-distribution-header {
+  font-size: 0.75rem;
+  font-weight: 700;
+  opacity: 0.65;
+}
+
+.daily-distribution-header span:last-child {
+  text-align: right;
+}
+
 .daily-distribution-track {
   display: block;
   position: relative;
