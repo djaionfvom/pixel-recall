@@ -2597,24 +2597,30 @@ function updateDailyProgressPanel({ dailyNumber, accuracy, streakState, backendS
   const hasOfficialAccuracy = Number.isFinite(officialAccuracy);
 
   if (submission?.alreadySubmitted) {
-    const officialText = hasOfficialAccuracy ? ` Your first official score was ${officialAccuracy}%.` : "";
-    if (typeof stats.beatPercent === "number") {
-      `Practice replay.${officialText} That official score beat ${stats.beatPercent}% of today’s players.`;
-    } else {
-      dailyCommunityHeadline.textContent = `Practice replay.${officialText} First attempts only count in today’s distribution.`;
-    }
-  } else if (stats.total === 1) {
-    dailyCommunityHeadline.textContent = "Official result submitted. First score in today’s distribution.";
-  } else if (typeof stats.beatPercent === "number") {
+  const officialText = hasOfficialAccuracy
+    ? ` Your first official score was ${officialAccuracy}%.`
+    : "";
+
+  if (typeof stats.beatPercent === "number") {
     dailyCommunityHeadline.textContent =
-  `Official result submitted. You beat ${stats.beatPercent}% of today’s players.`;
+      `Practice replay.${officialText} That official score beat ${stats.beatPercent}% of today’s players.`;
   } else {
     dailyCommunityHeadline.textContent =
-  `Official result submitted. Your score is included in today’s distribution.`;
+      `Practice replay.${officialText} First attempts only count in today’s distribution.`;
   }
-
-  renderDailyDistribution(stats.bucketCounts, stats.total);
+} else if (stats.total === 1) {
+  dailyCommunityHeadline.textContent =
+    "Official result submitted. Your score is included in today’s distribution.";
+} else if (typeof stats.beatPercent === "number") {
+  dailyCommunityHeadline.textContent =
+    `Official result submitted. You beat ${stats.beatPercent}% of today’s players.`;
+} else {
+  dailyCommunityHeadline.textContent =
+    "Official result submitted. Your score is included in today’s distribution.";
 }
+
+renderDailyDistribution(stats.bucketCounts, stats.total);
+
 
 function renderDailyDistribution(bucketCounts, total) {
   dailyDistributionBars.innerHTML = `
