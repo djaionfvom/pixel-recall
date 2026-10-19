@@ -2620,6 +2620,7 @@ function updateDailyProgressPanel({ dailyNumber, accuracy, streakState, backendS
 }
 
 renderDailyDistribution(stats.bucketCounts, stats.total);
+}
 
 
 function renderDailyDistribution(bucketCounts, total) {
