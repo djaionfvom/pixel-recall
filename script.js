@@ -2241,10 +2241,10 @@ const RUN_GRID_STAGES = [
 ];
 const RUN_STEADY_PREVIEW_ROUNDS = RUN_GRID_STAGES.reduce((total, stage) => total + stage.rounds, 0);
 const DAILY_DISTRIBUTION_BUCKETS = [
-  { label: "0–49%", min: 0, max: 49 },
-  { label: "50–69%", min: 50, max: 69 },
-  { label: "70–89%", min: 70, max: 89 },
-  { label: "90–100%", min: 90, max: 100 }
+  { label: "0–49", min: 0, max: 49 },
+  { label: "50–69", min: 50, max: 69 },
+  { label: "70–89", min: 70, max: 89 },
+  { label: "90–100", min: 90, max: 100 }
 ];
 const BACKEND_CONFIG = window.PIXEL_RECALL_BACKEND || {};
 const SUPABASE_URL = (BACKEND_CONFIG.SUPABASE_URL || "").replace(/\/$/, "");
@@ -2615,17 +2615,30 @@ function updateDailyProgressPanel({ dailyNumber, accuracy, streakState, backendS
 }
 
 function renderDailyDistribution(bucketCounts, total) {
-  dailyDistributionBars.innerHTML = "";
+  dailyDistributionBars.innerHTML = `
+    <div class="daily-distribution-row daily-distribution-header">
+      <span>Score</span>
+      <span></span>
+      <span>Players</span>
+    </div>
+  `;
+
   DAILY_DISTRIBUTION_BUCKETS.forEach((bucket) => {
     const count = bucketCounts[bucket.label] || 0;
     const percent = total > 0 ? Math.round((count / total) * 100) : 0;
+
     const row = document.createElement("div");
     row.className = "daily-distribution-row";
     row.innerHTML = `
       <span>${bucket.label}</span>
-      <span class="daily-distribution-track" aria-hidden="true" style="--daily-bar-width: ${percent}%"><span class="daily-distribution-fill"></span></span>
-      <span>${count}</span>
+      <span class="daily-distribution-track"
+            aria-hidden="true"
+            style="--daily-bar-width: ${percent}%">
+        <span class="daily-distribution-fill"></span>
+      </span>
+      <span>${percent}%</span>
     `;
+
     dailyDistributionBars.appendChild(row);
   });
 }
