@@ -254,6 +254,60 @@ h1 {
   user-select: none;
 }
 
+.grid-stage {
+  position: relative;
+  display: flow-root;
+}
+
+.memory-countdown {
+  position: absolute;
+  inset: 0;
+  z-index: 8;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  border-radius: 18px;
+  background: rgba(15, 18, 32, .64);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+}
+
+.memory-countdown[hidden] {
+  display: none;
+}
+
+.memory-countdown-number {
+  display: grid;
+  place-items: center;
+  width: 92px;
+  height: 92px;
+  border: 2px solid rgba(243, 201, 105, .55);
+  border-radius: 50%;
+  background: rgba(15, 18, 32, .92);
+  color: var(--accent);
+  font-size: 54px;
+  font-weight: 950;
+  line-height: 1;
+  box-shadow: 0 16px 45px rgba(0, 0, 0, .42);
+}
+
+.memory-countdown-number.is-animating {
+  animation: memory-countdown-pop .78s ease-out both;
+}
+
+@keyframes memory-countdown-pop {
+  0% { opacity: 0; transform: scale(.62); }
+  22% { opacity: 1; transform: scale(1.08); }
+  72% { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(.94); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .memory-countdown-number.is-animating {
+    animation: none;
+  }
+}
+
 .grid.drawing-active {
   touch-action: none;
 }

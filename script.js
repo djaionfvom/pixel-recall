@@ -2128,11 +2128,17 @@ const DAILY_PATTERN_DATA = [
 ];
 
 const DAILY_PREVIEW_TIME = 2800;
+const DAILY_PATTERN_COUNT = 3; // Change only this value to 5 if you later want five Daily patterns.
+const DAILY_MULTI_START_NUMBER = 302; // Daily #301 (2026-10-28) stays on the legacy one-pattern format.
+const DAILY_COUNTDOWN_SECONDS = 3;
+const DAILY_COUNTDOWN_STEP_MS = 850;
 const dailyPuzzles = DAILY_PATTERN_DATA.map(([name, rows]) => makePuzzle(name, rows, DAILY_PREVIEW_TIME));
 
 const PASS_SCORE = 80;
 
 const grid = document.querySelector("#grid");
+const memoryCountdown = document.querySelector("#memoryCountdown");
+const memoryCountdownNumber = document.querySelector("#memoryCountdownNumber");
 const startBtn = document.querySelector("#startBtn");
 const clearBtn = document.querySelector("#clearBtn");
 const checkBtn = document.querySelector("#checkBtn");
@@ -2278,6 +2284,14 @@ let runSubmitModalReturnFocus = null;
 let runSubmitAutoOpenTimer = null;
 
 let mode = customChallengePuzzle ? "custom" : "daily";
+let dailySessionInfo = null;
+let dailyPatternIndex = 0;
+let dailyPatternResults = [];
+let dailySessionActive = false;
+let dailySessionComplete = false;
+let dailyAwaitingNext = false;
+let dailyCountdownTimer = null;
+let dailyCountdownToken = 0;
 let runSequence = [];
 let runSequenceIndex = 0;
 let runSequenceCycle = 0;
@@ -2791,7 +2805,7 @@ function setShareButtonState(disabled, text) {
 }
 
 function updateResultActions() {
-  const hasDailyResult = mode === "daily" && lastResult?.mode === "daily";
+  const hasDailyResult = mode === "daily" && lastResult?.mode === "daily" && dailySessionComplete;
   const hasShareableResult = Boolean(lastResult) && mode !== "daily";
   const canSubmitRun = mode === "run" && Boolean(lastCompletedRun) && runFinished;
 
@@ -2807,7 +2821,10 @@ function updateResultActions() {
 function showDailyResultsModal() {
   if (!lastResult || lastResult.mode !== "daily") return;
 
-  dailyResultSummary.textContent = `${lastResult.accuracy}% accuracy · Correct ${lastResult.correct} · Missed ${lastResult.missed} · Extra ${lastResult.extra}`;
+  const scoreSummary = lastResult.dailyPatternCount > 1
+    ? `${lastResult.accuracy}% overall · ${lastResult.dailyPatternCount} patterns`
+    : `${lastResult.accuracy}% accuracy`;
+  dailyResultSummary.textContent = `${scoreSummary} · Correct ${lastResult.correct} · Missed ${lastResult.missed} · Extra ${lastResult.extra}`;
   dailyResultsModalReturnFocus = document.activeElement instanceof HTMLElement
     ? document.activeElement
     : dailyResultsBtn;
@@ -3447,16 +3464,69 @@ function configureCustomChallengeLinks() {
   challengeEmailShare.href = `mailto:?subject=${encodeURIComponent("Pixel Recall friend challenge")}&body=${encodeURIComponent(combined)}`;
 }
 
+function buildDailyPuzzleIndexes(dayOffset, count) {
+  const total = dailyPuzzles.length;
+  const safeCount = Math.max(1, Math.min(count, total));
+  const firstIndex = ((dayOffset % total) + total) % total;
+  const indexes = [firstIndex];
+
+  // Keep the historical first puzzle exactly unchanged, then deterministically
+  // choose distinct companions for the same Daily number.
+  let state = (((dayOffset + 1) * 2654435761) ^ 0x9e3779b9) >>> 0;
+  while (indexes.length < safeCount) {
+    state ^= state << 13;
+    state ^= state >>> 17;
+    state ^= state << 5;
+    const candidate = (state >>> 0) % total;
+    if (!indexes.includes(candidate)) indexes.push(candidate);
+  }
+
+  return indexes;
+}
+
 function dailyInfo() {
   const dayOffset = Math.floor((utcDayStart() - DAILY_EPOCH) / DAY_MS);
   const dailyNumber = Math.max(1, dayOffset + 1);
-  const puzzleIndex = ((dayOffset % dailyPuzzles.length) + dailyPuzzles.length) % dailyPuzzles.length;
-  return { dailyNumber, puzzleIndex };
+  const patternCount = dailyNumber >= DAILY_MULTI_START_NUMBER
+    ? Math.min(DAILY_PATTERN_COUNT, dailyPuzzles.length)
+    : 1;
+  const puzzleIndexes = buildDailyPuzzleIndexes(dayOffset, patternCount);
+  return {
+    dailyNumber,
+    dayOffset,
+    patternCount,
+    puzzleIndex: puzzleIndexes[0],
+    puzzleIndexes
+  };
+}
+
+function activeDailyInfo() {
+  return dailySessionActive && dailySessionInfo ? dailySessionInfo : dailyInfo();
+}
+
+function clearDailySession() {
+  dailySessionInfo = null;
+  dailyPatternIndex = 0;
+  dailyPatternResults = [];
+  dailySessionActive = false;
+  dailySessionComplete = false;
+  dailyAwaitingNext = false;
+}
+
+function beginDailySession() {
+  dailySessionInfo = dailyInfo();
+  dailyPatternIndex = 0;
+  dailyPatternResults = [];
+  dailySessionActive = true;
+  dailySessionComplete = false;
+  dailyAwaitingNext = false;
 }
 
 function currentPuzzle() {
   if (mode === "daily") {
-    return dailyPuzzles[dailyInfo().puzzleIndex];
+    const info = activeDailyInfo();
+    const safeIndex = Math.min(dailyPatternIndex, info.patternCount - 1);
+    return dailyPuzzles[info.puzzleIndexes[safeIndex]];
   }
 
   if (mode === "custom") {
@@ -3487,12 +3557,18 @@ function currentPuzzle() {
     return runSequence[runSequenceIndex];
   }
 
-  return dailyPuzzles[dailyInfo().puzzleIndex];
+  const info = activeDailyInfo();
+  return dailyPuzzles[info.puzzleIndexes[0]];
 }
 
 function currentRoundLabel(puzzle) {
   if (mode === "daily") {
-    return `Daily #${dailyInfo().dailyNumber}`;
+    const info = activeDailyInfo();
+    if (info.patternCount > 1) {
+      const shownPattern = Math.min(dailyPatternIndex + 1, info.patternCount);
+      return `Daily #${info.dailyNumber} · Pattern ${shownPattern}/${info.patternCount}`;
+    }
+    return `Daily #${info.dailyNumber}`;
   }
 
   if (mode === "custom") {
@@ -3539,8 +3615,103 @@ function resetButtons() {
   updateResultActions();
 }
 
+function cancelDailyCountdown() {
+  dailyCountdownToken += 1;
+  if (dailyCountdownTimer !== null) {
+    clearTimeout(dailyCountdownTimer);
+    dailyCountdownTimer = null;
+  }
+  if (memoryCountdown) memoryCountdown.hidden = true;
+  if (memoryCountdownNumber) memoryCountdownNumber.classList.remove("is-animating");
+}
+
+function runDailyCountdown(onComplete) {
+  cancelDailyCountdown();
+  const token = dailyCountdownToken;
+  let remaining = DAILY_COUNTDOWN_SECONDS;
+
+  startBtn.disabled = true;
+  clearBtn.disabled = true;
+  checkBtn.disabled = true;
+  canDraw = false;
+
+  if (!memoryCountdown || !memoryCountdownNumber) {
+    onComplete();
+    return;
+  }
+
+  memoryCountdown.hidden = false;
+
+  const showStep = () => {
+    if (token !== dailyCountdownToken || mode !== "daily") return;
+
+    memoryCountdownNumber.textContent = String(remaining);
+    memoryCountdownNumber.classList.remove("is-animating");
+    void memoryCountdownNumber.offsetWidth;
+    memoryCountdownNumber.classList.add("is-animating");
+    message.textContent = `Get ready… ${remaining}`;
+
+    if (remaining <= 1) {
+      dailyCountdownTimer = setTimeout(() => {
+        if (token !== dailyCountdownToken || mode !== "daily") return;
+        memoryCountdown.hidden = true;
+        memoryCountdownNumber.classList.remove("is-animating");
+        dailyCountdownTimer = null;
+        onComplete();
+      }, DAILY_COUNTDOWN_STEP_MS);
+      return;
+    }
+
+    remaining -= 1;
+    dailyCountdownTimer = setTimeout(showStep, DAILY_COUNTDOWN_STEP_MS);
+  };
+
+  showStep();
+}
+
+function recordDailyPatternResult(result, targetCells) {
+  dailyPatternResults[dailyPatternIndex] = {
+    accuracy: result.accuracy,
+    correct: result.correct,
+    missed: result.missed,
+    extra: result.extra,
+    targetCells,
+    puzzleName: result.puzzleName
+  };
+}
+
+function buildCombinedDailyResult(finalPatternResult) {
+  const info = activeDailyInfo();
+  const totals = dailyPatternResults.reduce((sum, result) => {
+    if (!result) return sum;
+    sum.correct += result.correct;
+    sum.missed += result.missed;
+    sum.extra += result.extra;
+    sum.targetCells += result.targetCells;
+    return sum;
+  }, { correct: 0, missed: 0, extra: 0, targetCells: 0 });
+
+  const denominator = totals.targetCells + totals.extra;
+  const combinedAccuracy = denominator > 0
+    ? Math.max(0, Math.round((totals.correct / denominator) * 100))
+    : 0;
+
+  return {
+    ...finalPatternResult,
+    dailyNumber: info.dailyNumber,
+    accuracy: combinedAccuracy,
+    correct: totals.correct,
+    missed: totals.missed,
+    extra: totals.extra,
+    puzzleName: info.patternCount > 1 ? `Daily set (${info.patternCount} patterns)` : finalPatternResult.puzzleName,
+    dailyPatternCount: info.patternCount,
+    dailyPatternAccuracies: dailyPatternResults.filter(Boolean).map((result) => result.accuracy)
+  };
+}
+
 function buildGrid() {
   clearTimeout(previewTimer);
+  cancelDailyCountdown();
   cancelRunSubmitAutoOpen();
   const puzzle = currentPuzzle();
 
@@ -3624,7 +3795,10 @@ function buildGrid() {
       ? "Press Start and memorize the pattern."
       : `Pass each pattern with at least ${PASS_SCORE}% accuracy. One miss ends the run.`;
   } else {
-    message.textContent = "Press Start and memorize the pattern.";
+    const info = activeDailyInfo();
+    message.textContent = info.patternCount > 1
+      ? `${info.patternCount} patterns today. Press Start when you're ready.`
+      : "Press Start and memorize the pattern.";
   }
 }
 
@@ -3658,25 +3832,45 @@ function startGame() {
     return;
   }
 
+  if (mode === "daily") {
+    if (!dailySessionActive || dailySessionComplete) {
+      beginDailySession();
+    } else if (dailyAwaitingNext) {
+      dailyPatternIndex = Math.min(dailyPatternIndex + 1, activeDailyInfo().patternCount - 1);
+      dailyAwaitingNext = false;
+    }
+  }
+
   if (mode === "run" && !runActive) beginRun();
 
   buildGrid();
 
+  const info = mode === "daily" ? activeDailyInfo() : null;
   trackEvent("game_started", {
     game_mode: mode,
-    daily_number: mode === "daily" ? dailyInfo().dailyNumber : 0,
+    daily_number: info ? info.dailyNumber : 0,
+    daily_pattern_number: info ? dailyPatternIndex + 1 : 0,
+    daily_pattern_count: info ? info.patternCount : 0,
     run_pattern_number: mode === "run" ? runPassed + 1 : 0,
     run_patterns_passed: mode === "run" ? runPassed : 0,
     custom_pattern_cells: mode === "custom" ? currentPuzzle().cells.length : 0,
     custom_grid_size: mode === "custom" ? currentPuzzle().size : 0
   });
 
-  startBtn.disabled = true;
-  checkBtn.disabled = false;
-  clearBtn.disabled = false;
-  message.textContent = "Memorize...";
-  showPattern();
-  previewTimer = setTimeout(hidePattern, currentPuzzle().time);
+  const beginPreview = () => {
+    startBtn.disabled = true;
+    checkBtn.disabled = false;
+    clearBtn.disabled = false;
+    message.textContent = "Memorize...";
+    showPattern();
+    previewTimer = setTimeout(hidePattern, currentPuzzle().time);
+  };
+
+  if (mode === "daily") {
+    runDailyCountdown(beginPreview);
+  } else {
+    beginPreview();
+  }
 }
 
 function applyStrokeCell(i, cell) {
@@ -3729,7 +3923,7 @@ function checkAnswer() {
   const target = new Set(puzzle.cells);
   const resultMode = mode;
   const resultRunPatternNumber = resultMode === "run" ? runPassed + 1 : 0;
-  const resultDailyNumber = dailyInfo().dailyNumber;
+  const resultDailyNumber = resultMode === "daily" ? activeDailyInfo().dailyNumber : dailyInfo().dailyNumber;
   let correct = 0;
 
   document.querySelectorAll(".cell").forEach((cell) => {
@@ -3800,10 +3994,34 @@ function checkAnswer() {
   updateResultActions();
 
   if (resultMode === "daily") {
+    const info = activeDailyInfo();
+    recordDailyPatternResult(lastResult, puzzle.cells.length);
+    const isFinalDailyPattern = dailyPatternIndex >= info.patternCount - 1;
+
+    if (!isFinalDailyPattern) {
+      dailyAwaitingNext = true;
+      dailySessionComplete = false;
+      startBtn.textContent = `Next Pattern (${dailyPatternIndex + 2}/${info.patternCount})`;
+      levelInfo.textContent = currentRoundLabel(puzzle);
+      message.textContent = `Correct: ${correct} · Missed: ${missed} · Extra: ${extra} · Pattern ${dailyPatternIndex + 1}/${info.patternCount} complete.`;
+      updateResultActions();
+      return;
+    }
+
+    dailyAwaitingNext = false;
+    dailySessionComplete = true;
+    lastResult = buildCombinedDailyResult(lastResult);
+    scoreBox.textContent = `${lastResult.accuracy}%`;
+    levelInfo.textContent = `Daily #${info.dailyNumber} · Complete`;
+    message.textContent = info.patternCount > 1
+      ? `Daily complete · Correct: ${lastResult.correct} · Missed: ${lastResult.missed} · Extra: ${lastResult.extra}`
+      : `Correct: ${lastResult.correct} · Missed: ${lastResult.missed} · Extra: ${lastResult.extra}`;
     startBtn.textContent = "Try Again";
+
     const bestKey = `pixelRecallDailyBest-${resultDailyNumber}`;
     const previousBest = Number(localStorage.getItem(bestKey)) || 0;
-    if (accuracy > previousBest) localStorage.setItem(bestKey, String(accuracy));
+    if (lastResult.accuracy > previousBest) localStorage.setItem(bestKey, String(lastResult.accuracy));
+    updateResultActions();
     handleDailyCompletion(lastResult);
   } else if (resultMode === "custom") {
     startBtn.textContent = "Try Again";
@@ -3929,7 +4147,7 @@ async function createResultImageBlob() {
   ctx.fillText("PIXEL RECALL", 110, 130);
 
   const roundHeading = lastResult.mode === "daily"
-    ? `Daily #${lastResult.dailyNumber}`
+    ? `Daily #${lastResult.dailyNumber}${lastResult.dailyPatternCount > 1 ? ` · ${lastResult.dailyPatternCount} patterns` : ""}`
     : lastResult.mode === "custom"
       ? "Friend Challenge"
       : `Recall Run · ${lastResult.runPatternsPassed || 0} passed`;
@@ -4150,7 +4368,7 @@ function shareMessageText() {
   if (!lastResult) return "Play Pixel Recall";
 
   const heading = lastResult.mode === "daily"
-    ? `Pixel Recall Daily #${lastResult.dailyNumber}`
+    ? `Pixel Recall Daily #${lastResult.dailyNumber}${lastResult.dailyPatternCount > 1 ? ` · ${lastResult.dailyPatternCount} patterns` : ""}`
     : lastResult.mode === "custom"
       ? "Pixel Recall Friend Challenge"
       : `Pixel Recall Run · ${lastResult.runPatternsPassed || 0} passed`;
@@ -4456,6 +4674,8 @@ function activeModalState() {
 function setMode(nextMode) {
   if (nextMode === mode) return;
 
+  cancelDailyCountdown();
+  clearDailySession();
   mode = nextMode;
   if (mode === "custom") {
     customBuilderActive = !customChallengePuzzle;
@@ -4589,7 +4809,7 @@ function resizeVisibleGrid() {
 window.addEventListener("resize", resizeVisibleGrid);
 window.visualViewport?.addEventListener("resize", resizeVisibleGrid);
 
-console.info("Pixel Recall build: v34-mobile-run-grid-restore");
+console.info("Pixel Recall build: v35-daily-trio-countdown");
 applyUiScale(uiScale, false);
 updateModeButtons();
 buildGrid();

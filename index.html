@@ -23,7 +23,7 @@
   <meta name="twitter:image" content="https://pixelrecall.net/og-image.png" />
 
   <link rel="icon" href="icon.svg" type="image/svg+xml" />
-  <link rel="stylesheet" href="style.css?v=v33-run-result-flow-fix" />
+  <link rel="stylesheet" href="style.css?v=v35-daily-trio-countdown" />
 
   <!-- Google tag (gtag.js) -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-20214X136N"></script>
@@ -94,7 +94,12 @@
         </select>
       </div>
 
-      <div id="grid" class="grid" aria-label="Drawing grid"></div>
+      <div class="grid-stage">
+        <div id="grid" class="grid" aria-label="Drawing grid"></div>
+        <div id="memoryCountdown" class="memory-countdown" aria-live="polite" aria-label="Get ready countdown" hidden>
+          <span id="memoryCountdownNumber" class="memory-countdown-number">3</span>
+        </div>
+      </div>
 
       <p id="message" class="message" aria-live="polite">
         Press Start and memorize the pattern.
@@ -291,7 +296,7 @@
     </section>
   </div>
 
-  <script src="backend-config.js?v=v27-popup-results-leaderboard"></script>
-  <script src="script.js?v=v33-run-result-flow-fix"></script>
+  <script src="backend-config.js?v=v35-daily-trio-countdown"></script>
+  <script src="script.js?v=v35-daily-trio-countdown"></script>
 </body>
 </html>

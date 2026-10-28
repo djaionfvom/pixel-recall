@@ -86,3 +86,13 @@ This version uses the same Run leaderboard table/functions as v24/v25. If that s
 - Rebuilds the locked result cells if a popup/UI flow altered the grid contents.
 - Handles normal window resizes and mobile visual-viewport/keyboard resizes.
 - No gameplay, patterns, scoring, leaderboard, Daily, Challenge, or backend changes.
+
+
+## v35 Daily trio + countdown
+
+- Daily #301 (2026-10-28) remains the existing single-pattern Daily so an in-day deployment does not invalidate existing scores.
+- Daily #302 onward uses 3 deterministic patterns per day. Change `DAILY_PATTERN_COUNT` from `3` to `5` in `script.js` if five patterns are preferred later.
+- Each Daily pattern gets an animated 3 → 2 → 1 countdown before the memorization preview begins.
+- The first historical Daily puzzle remains the first puzzle in each new set; additional puzzles are deterministic and distinct.
+- The three pattern results are combined into one overall Daily accuracy and submitted once to the existing backend, so no Supabase schema migration is required.
+- Daily streaks and community score distributions are updated only after all Daily patterns are completed.
