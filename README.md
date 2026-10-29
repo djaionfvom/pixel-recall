@@ -96,3 +96,17 @@ This version uses the same Run leaderboard table/functions as v24/v25. If that s
 - The first historical Daily puzzle remains the first puzzle in each new set; additional puzzles are deterministic and distinct.
 - The three pattern results are combined into one overall Daily accuracy and submitted once to the existing backend, so no Supabase schema migration is required.
 - Daily streaks and community score distributions are updated only after all Daily patterns are completed.
+
+
+## v37 Daily 1,095-pattern year pool
+
+- Daily #301 (2026-10-28) remains the existing single-pattern Daily, so deploying this build today does not invalidate scores already submitted today.
+- Daily #302 onward uses exactly 3 patterns per day.
+- The Daily library now contains exactly 1,095 distinct binary pixel grids: 365 legacy patterns, 365 newly selected Font Awesome-derived silhouettes, and 365 clean positional/mirrored variants of the selected silhouettes.
+- Across each 365-day cycle, every grid in all three 365-pattern banks is used exactly once; there are no exact pixel-grid repeats inside that cycle.
+- The legacy first-pattern schedule remains locked to the original 365-pattern cycle. Adding the new banks therefore does not reshuffle the historical first puzzle.
+- The third bank is offset by 137 days, so a selected silhouette and its visual variant never appear together in the same Daily.
+- Each of the three patterns gets the animated 3 → 2 → 1 countdown before memorization.
+- The overall Daily score is the rounded arithmetic mean of the three individual 0–100 scores. Example: 80%, 100%, 70% → 83%.
+- Only one final Daily result is submitted to the existing Supabase endpoint, so no backend/schema migration is required.
+- Daily streak/community statistics are updated only after all three patterns are completed.
