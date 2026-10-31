@@ -47,9 +47,9 @@ const generatedRunObjectData = Array.isArray(window.PIXEL_RECALL_RUN_OBJECTS)
 
 const dailyObjectBankReady = generatedRealObjectBanks.length === 3
   && generatedRealObjectBanks.every((bank) => Array.isArray(bank)
-    && bank.length === 365
+    && bank.length > 0
     && bank.every(validGeneratedRealObjectEntry));
-const runObjectBankReady = generatedRunObjectData.length === 1095
+const runObjectBankReady = generatedRunObjectData.length > 0
   && generatedRunObjectData.every(validGeneratedRunObject);
 
 function estimateRunPatternDifficulty(puzzle) {
@@ -88,8 +88,14 @@ const DAILY_PATTERN_COUNT = 3;
 const DAILY_MULTI_START_NUMBER = 302;
 const DAILY_COUNTDOWN_SECONDS = 3;
 const DAILY_COUNTDOWN_STEP_MS = 850;
-const DAILY_BANK_SIZE = 365;
-const LEGACY_DAILY_PATTERN_COUNT = DAILY_BANK_SIZE;
+const DAILY_BANK_SIZES = dailyObjectBankReady
+  ? generatedRealObjectBanks.map((bank) => bank.length)
+  : [0, 0, 0];
+const DAILY_BANK_OFFSETS = [
+  0,
+  DAILY_BANK_SIZES[0],
+  DAILY_BANK_SIZES[0] + DAILY_BANK_SIZES[1]
+];
 
 const dailyLegacyPuzzles = dailyObjectBankReady
   ? generatedRealObjectBanks[0].map(([name, rows, image]) => makePuzzle(name, rows, DAILY_PREVIEW_TIME, image || ""))
@@ -103,7 +109,10 @@ const dailyExtraPuzzlesB = dailyObjectBankReady
 const dailyPuzzles = [...dailyLegacyPuzzles, ...dailyExtraPuzzlesA, ...dailyExtraPuzzlesB];
 
 if (dailyObjectBankReady && runObjectBankReady) {
-  console.info("Pixel Recall: ABO-only libraries ready", window.PIXEL_RECALL_REAL_OBJECT_META || {});
+  const meta = window.PIXEL_RECALL_REAL_OBJECT_META || {};
+  console.info(meta.partialBuild
+    ? "Pixel Recall: partial ABO-only libraries ready"
+    : "Pixel Recall: ABO-only libraries ready", meta);
 } else {
   console.warn("Pixel Recall: Daily/Run are waiting for the generated ABO library.");
 }
@@ -129,11 +138,10 @@ function shuffledOrder(length, seed) {
 }
 
 function buildDailyBankArrangement() {
-  const length = DAILY_BANK_SIZE;
   return {
-    bank0Order: shuffledOrder(length, 0xA10B0C01),
-    bank1Order: shuffledOrder(length, 0xA10B0C02),
-    bank2Order: shuffledOrder(length, 0xA10B0C03)
+    bank0Order: shuffledOrder(DAILY_BANK_SIZES[0], 0xA10B0C01),
+    bank1Order: shuffledOrder(DAILY_BANK_SIZES[1], 0xA10B0C02),
+    bank2Order: shuffledOrder(DAILY_BANK_SIZES[2], 0xA10B0C03)
   };
 }
 
@@ -1470,11 +1478,19 @@ function configureCustomChallengeLinks() {
 }
 
 function buildDailyPuzzleIndexes(dayOffset, count) {
-  const cycleIndex = ((dayOffset % DAILY_BANK_SIZE) + DAILY_BANK_SIZE) % DAILY_BANK_SIZE;
   const indexes = [];
-  if (count > 0) indexes.push(DAILY_BANK_ARRANGEMENT.bank0Order[cycleIndex]);
-  if (count > 1) indexes.push(DAILY_BANK_SIZE + DAILY_BANK_ARRANGEMENT.bank1Order[cycleIndex]);
-  if (count > 2) indexes.push((DAILY_BANK_SIZE * 2) + DAILY_BANK_ARRANGEMENT.bank2Order[cycleIndex]);
+  const orders = [
+    DAILY_BANK_ARRANGEMENT.bank0Order,
+    DAILY_BANK_ARRANGEMENT.bank1Order,
+    DAILY_BANK_ARRANGEMENT.bank2Order
+  ];
+
+  for (let bankIndex = 0; bankIndex < Math.min(count, 3); bankIndex += 1) {
+    const order = orders[bankIndex];
+    if (!order.length) continue;
+    const cycleIndex = ((dayOffset % order.length) + order.length) % order.length;
+    indexes.push(DAILY_BANK_OFFSETS[bankIndex] + order[cycleIndex]);
+  }
   return indexes;
 }
 

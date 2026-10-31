@@ -1,3 +1,7 @@
+# Pixel Recall v47 — broad ABO generation + partial fallback
+
+This revision fixes the v46 bottleneck that produced only ~2,300 candidate images and 26 selected patterns. The generator now samples the broad ABO catalog, ranks usable silhouettes globally, and deploys a partial disjoint Daily/Run library if the full 2,190 target is not reached. Daily banks may be smaller than 365; Run may contain fewer than 1,095 objects. The expensive generation workflow also no longer retriggers itself after committing generated data.
+
 # Pixel Recall v46 — GitHub ABO generation fix
 
 This package is based on the current Pixel Recall gameplay/UI, with all built-in Daily/Run pattern banks removed. Daily and Run are populated only after the GitHub ABO generator succeeds.

@@ -193,6 +193,35 @@ TITLE_BLACKLIST = re.compile(
     re.I,
 )
 
+# Broad fallback mode: ABO is much larger than the curated title whitelist.  We keep
+# the curated labels when possible, but otherwise admit ordinary catalog listings and
+# use the product type as a human-readable label.  This is what lets a 30k candidate
+# budget actually reach tens of thousands of images instead of ~2k.
+PRODUCT_TYPE_BLACKLIST = re.compile(
+    r"\b(book|ebook|magazine|music|dvd|blu.?ray|software|video game|poster|print|sticker|decal|"
+    r"wallpaper|fabric|textile|sheet|duvet|curtain|rug|mat|shirt|dress|pants|underwear|sock|"
+    r"costume|jewelry|earring|necklace|bracelet|ring|phone case|tablet case|screen protector)\b",
+    re.I,
+)
+
+GENERIC_LABELS = {
+    "", "home", "kitchen", "sports", "outdoors", "office", "electronics", "toy", "toys",
+    "product", "products", "other", "misc", "miscellaneous", "unknown"
+}
+
+def humanize_product_type(product_type: str) -> str:
+    text = re.sub(r"[_\-]+", " ", product_type or "").strip()
+    text = re.sub(r"\s+", " ", text)
+    if not text:
+        return "Object"
+    words = [w for w in text.split() if w]
+    if not words:
+        return "Object"
+    label = " ".join(words[-4:]).title()
+    if label.lower() in GENERIC_LABELS:
+        return "Object"
+    return label[:42]
+
 @dataclass
 class Listing:
     item_id: str
@@ -250,12 +279,15 @@ def first_product_type(values) -> str:
 
 def canonical_label(title: str, product_type: str) -> Optional[str]:
     text = f"{title} {product_type.replace('_', ' ')}"
-    if TITLE_BLACKLIST.search(text):
+    if TITLE_BLACKLIST.search(text) or PRODUCT_TYPE_BLACKLIST.search(text):
         return None
     for pattern, label in COMPILED_RULES:
         if pattern.search(text):
             return label
-    return None
+    # Broad ABO fallback: keep the listing rather than throwing away almost the
+    # entire dataset. Product type gives a stable readable label; unknown generic
+    # categories simply become "Object".
+    return humanize_product_type(product_type)
 
 
 def iter_listing_objects_from_tar(path: Path) -> Iterator[dict]:
@@ -284,13 +316,18 @@ def collect_listings(path: Path, max_per_label: int) -> dict[str, list[Listing]]
     seen_item: set[str] = set()
     scanned = 0
     eligible = 0
+    curated = 0
+    fallback = 0
     for obj in iter_listing_objects_from_tar(path):
         scanned += 1
         item_id = str(obj.get("item_id") or "")
         image_id = str(obj.get("main_image_id") or "")
         if not item_id or not image_id or item_id in seen_item:
             continue
-        if obj.get("domain_name") not in (None, "", "amazon.com"):
+        # ABO is primarily amazon.com data, but do not throw away a valid listing
+        # merely because domain_name is absent or another Amazon locale.
+        domain = str(obj.get("domain_name") or "")
+        if domain and "amazon." not in domain.lower():
             continue
         title = english_value(obj.get("item_name"))
         product_type = first_product_type(obj.get("product_type"))
@@ -301,16 +338,28 @@ def collect_listings(path: Path, max_per_label: int) -> dict[str, list[Listing]]
             continue
         seen_item.add(item_id)
         eligible += 1
-        buckets[label].append(Listing(item_id, image_id, label, title, product_type))
-    # Deterministic pseudo-random sample per category, independent of archive order.
-    for label in list(buckets):
-        buckets[label].sort(key=lambda x: sha_key(x.item_id))
-        buckets[label] = buckets[label][:max_per_label]
-        if not buckets[label]:
-            del buckets[label]
-    print(f"Scanned {scanned:,} ABO listings; {eligible:,} matched curated everyday-object rules across {len(buckets)} labels.")
-    return buckets
+        if any(pattern.search(f"{title} {product_type.replace('_', ' ')}") for pattern, _ in COMPILED_RULES):
+            curated += 1
+        else:
+            fallback += 1
+        # Shard broad labels deterministically so a generic product type cannot be
+        # capped to only a few hundred images. The display label stays unchanged.
+        shard_count = 8 if label == "Object" else 4
+        shard = int(sha_key(item_id)[:8], 16) % shard_count
+        bucket_key = f"{label}::{shard}"
+        buckets[bucket_key].append(Listing(item_id, image_id, label, title, product_type))
 
+    # Deterministic pseudo-random sample per bucket, independent of archive order.
+    for key in list(buckets):
+        buckets[key].sort(key=lambda x: sha_key(x.item_id))
+        buckets[key] = buckets[key][:max_per_label]
+        if not buckets[key]:
+            del buckets[key]
+    print(
+        f"Scanned {scanned:,} ABO listings; {eligible:,} broad candidates "
+        f"({curated:,} curated-label, {fallback:,} fallback) across {len(buckets)} sampling buckets."
+    )
+    return buckets
 
 def round_robin_records(buckets: dict[str, list[Listing]]) -> list[Listing]:
     queues = {k: deque(v) for k, v in buckets.items() if v}
@@ -409,21 +458,24 @@ def white_background_mask(rgb: np.ndarray, min_border_white: float) -> tuple[Opt
     white_fraction = float(np.mean(np.min(border, axis=1) >= 225))
     border_spread = float(np.percentile(np.linalg.norm(border - bg[None, :], axis=1), 95))
     bg_brightness = float(np.mean(bg))
+    strict_background = bool(bg_brightness >= 218 and white_fraction >= min_border_white and border_spread <= 32)
     metrics = {
         "border_white_fraction": white_fraction,
         "border_spread": border_spread,
         "background_brightness": bg_brightness,
+        "strict_background": strict_background,
     }
-    if bg_brightness < 218 or white_fraction < min_border_white or border_spread > 32:
-        return None, metrics, f"background not plain/white enough (white={white_fraction:.2f}, bg={bg_brightness:.0f}, spread={border_spread:.0f})"
+    # Hard reject only clearly unsuitable lifestyle/noisy/dark backgrounds. This
+    # still strongly favors white catalog shots through the final quality ranking.
+    if bg_brightness < 172 or border_spread > 72:
+        return None, metrics, f"background too dark/noisy (white={white_fraction:.2f}, bg={bg_brightness:.0f}, spread={border_spread:.0f})"
 
     arr = rgb.astype(np.float32)
     dist = np.linalg.norm(arr - bg[None, None, :], axis=2)
     border_dist = np.linalg.norm(border - bg[None, :], axis=1)
-    threshold = float(np.clip(np.percentile(border_dist, 99.5) + 13.0, 20.0, 62.0))
+    threshold = float(np.clip(np.percentile(border_dist, 99.0) + 11.0, 18.0, 70.0))
     mask = dist > threshold
 
-    # Remove the outermost frame and keep components biased toward image centre.
     margin = max(2, min(h, w) // 120)
     mask[:margin] = False; mask[-margin:] = False; mask[:, :margin] = False; mask[:, -margin:] = False
     mask = clean_mask(mask)
@@ -436,7 +488,7 @@ def white_background_mask(rgb: np.ndarray, min_border_white: float) -> tuple[Opt
         area = float(stats[i, cv2.CC_STAT_AREA])
         x, y = centroids[i]
         center_penalty = math.hypot((x - cx) / w, (y - cy) / h)
-        scored.append((area * max(0.35, 1.0 - center_penalty), i))
+        scored.append((area * max(0.30, 1.0 - center_penalty), i))
     scored.sort(reverse=True)
     mask = labels == scored[0][1]
 
@@ -448,19 +500,20 @@ def white_background_mask(rgb: np.ndarray, min_border_white: float) -> tuple[Opt
     bbox_frac = float(((x1 - x0) * (y1 - y0)) / (w * h))
     center_x, center_y = (x0+x1)/(2*w), (y0+y1)/(2*h)
     center_offset = math.hypot(center_x - 0.5, center_y - 0.5)
-    metrics.update({"foreground_fraction": area_frac, "bbox_fraction": bbox_frac, "center_offset": center_offset})
-    if area_frac < 0.025:
+    touches_border = bool(x0 <= margin or y0 <= margin or x1 >= w-margin or y1 >= h-margin)
+    metrics.update({
+        "foreground_fraction": area_frac, "bbox_fraction": bbox_frac,
+        "center_offset": center_offset, "touches_border": touches_border
+    })
+    if area_frac < 0.018:
         return None, metrics, f"object too small ({area_frac:.3f} foreground)"
-    if area_frac > 0.70:
+    if area_frac > 0.78:
         return None, metrics, f"foreground too large ({area_frac:.3f})"
-    if bbox_frac < 0.07:
+    if bbox_frac < 0.045:
         return None, metrics, "bounding box too small"
-    if center_offset > 0.30:
+    if center_offset > 0.38:
         return None, metrics, f"object too off-centre ({center_offset:.2f})"
-    if x0 <= margin or y0 <= margin or x1 >= w-margin or y1 >= h-margin:
-        return None, metrics, "object touches image border"
     return mask.astype(bool), metrics, "ok"
-
 
 def square_crop(mask: np.ndarray, padding: float = 0.10) -> Optional[np.ndarray]:
     ys, xs = np.where(mask)
@@ -518,35 +571,47 @@ def normalized_shape_signature(rows: list[str]) -> str:
 def quantize(mask: np.ndarray, args) -> tuple[list[str], dict]:
     square = square_crop(mask, args.padding)
     if square is None:
-        return [], {"accepted": False, "reason": "empty/tiny mask"}
+        return [], {"accepted": False, "strict": False, "reason": "empty/tiny mask"}
     occupancy = cv2.resize(square.astype(np.float32), (GRID, GRID), interpolation=cv2.INTER_AREA)
     best = None
-    for threshold in np.arange(0.15, 0.71, 0.025):
+    for threshold in np.arange(0.12, 0.74, 0.02):
         grid = occupancy >= threshold
         recon = cv2.resize(grid.astype(np.uint8), (square.shape[1], square.shape[0]), interpolation=cv2.INTER_NEAREST).astype(bool)
         iou, dice, ncc = similarity(square, recon)
         filled = int(grid.sum()); comps = components(grid)
-        objective = 0.64*iou + 0.36*max(0.0, ncc) - 0.025*max(0, comps-1)
+        objective = 0.60*iou + 0.32*max(0.0, ncc) + 0.08*dice - 0.020*max(0, comps-1)
         item = (objective, float(threshold), grid, iou, dice, ncc, filled, comps)
         if best is None or item[0] > best[0]:
             best = item
     _, threshold, grid, iou, dice, ncc, filled, comps = best
     rows = ["".join("#" if v else "." for v in row) for row in grid]
-    reasons = []
-    if filled < args.min_filled: reasons.append(f"too sparse ({filled})")
-    if filled > args.max_filled: reasons.append(f"too full ({filled})")
-    if iou < args.min_iou: reasons.append(f"IoU {iou:.3f} < {args.min_iou:.3f}")
-    if ncc < args.min_ncc: reasons.append(f"NCC {ncc:.3f} < {args.min_ncc:.3f}")
-    if comps > args.max_components: reasons.append(f"{comps} components")
     nonempty_rows = sum("#" in row for row in rows)
     nonempty_cols = sum(any(rows[r][c] == "#" for r in range(GRID)) for c in range(GRID))
-    if nonempty_rows < 3 or nonempty_cols < 3: reasons.append("shape collapses to <3 rows/columns")
+
+    # Hard requirements for a usable memory pattern. IoU/NCC are deliberately not
+    # hard gates anymore; they drive ranking instead. This lets the build take the
+    # best 2,190 from the full 30k candidate budget rather than rejecting 99% first.
+    hard_reasons = []
+    if filled < max(5, args.min_filled - 3): hard_reasons.append(f"too sparse ({filled})")
+    if filled > min(50, args.max_filled + 7): hard_reasons.append(f"too full ({filled})")
+    if comps > max(3, args.max_components + 1): hard_reasons.append(f"{comps} components")
+    if nonempty_rows < 3 or nonempty_cols < 3: hard_reasons.append("shape collapses to <3 rows/columns")
+
+    strict_reasons = []
+    if filled < args.min_filled: strict_reasons.append(f"too sparse ({filled})")
+    if filled > args.max_filled: strict_reasons.append(f"too full ({filled})")
+    if iou < args.min_iou: strict_reasons.append(f"IoU {iou:.3f} < {args.min_iou:.3f}")
+    if ncc < args.min_ncc: strict_reasons.append(f"NCC {ncc:.3f} < {args.min_ncc:.3f}")
+    if comps > args.max_components: strict_reasons.append(f"{comps} components")
+
+    accepted = not hard_reasons
+    strict = accepted and not strict_reasons
+    reason = "accepted-strict" if strict else ("accepted-ranked" if accepted else "; ".join(hard_reasons))
     return rows, {
-        "accepted": not reasons, "reason": "; ".join(reasons) if reasons else "accepted",
+        "accepted": accepted, "strict": strict, "reason": reason,
         "threshold": threshold, "iou": iou, "dice": dice, "ncc": ncc,
         "filled": filled, "components": comps, "grid": grid, "square_mask": square,
     }
-
 
 def process_listing(listing: Listing, image_path: Path, image_url: str, args) -> tuple[Candidate, Optional[np.ndarray], Optional[np.ndarray]]:
     rgb = np.asarray(Image.open(image_path).convert("RGB"))
@@ -574,7 +639,21 @@ def load_reserved_signatures(path: Optional[Path]) -> set[str]:
 
 
 def score(c: Candidate) -> float:
-    return 0.62*c.iou + 0.30*c.ncc + 0.08*c.dice
+    density = c.filled / 64.0
+    density_bonus = max(0.0, 1.0 - abs(density - 0.36) / 0.36)
+    background_bonus = min(1.0, max(0.0, c.border_white_fraction))
+    return 0.50*c.iou + 0.24*max(0.0, c.ncc) + 0.12*c.dice + 0.08*density_bonus + 0.06*background_bonus
+
+def is_strict_candidate(c: Candidate, args) -> bool:
+    return bool(
+        c.accepted
+        and c.filled >= args.min_filled
+        and c.filled <= args.max_filled
+        and c.iou >= args.min_iou
+        and c.ncc >= args.min_ncc
+        and c.components <= args.max_components
+        and c.border_white_fraction >= args.min_border_white
+    )
 
 
 def memory_difficulty(c: Candidate) -> float:
@@ -631,25 +710,46 @@ def choose_best_candidates(candidates: list[Candidate], target: int, reserved: s
 def split_into_banks(chosen: list[Candidate], bank_count: int = 3) -> list[list[Candidate]]:
     if bank_count <= 0:
         return []
-    bank_size = len(chosen) // bank_count
+    total = len(chosen)
+    base, extra = divmod(total, bank_count)
     banks = []
+    cursor = 0
     for bank_index in range(bank_count):
-        start = bank_index * bank_size
-        end = start + bank_size
-        banks.append(chosen[start:end])
+        size = base + (1 if bank_index < extra else 0)
+        banks.append(chosen[cursor:cursor + size])
+        cursor += size
     return banks
 
+def allocate_pool_counts(total: int) -> tuple[int, int]:
+    """Split any successful partial build between Daily and Run with zero overlap."""
+    if total >= TOTAL_TARGET:
+        return DAILY_TARGET, RUN_TARGET
+    if total <= 0:
+        return 0, 0
+    if total == 1:
+        return 0, 1
+    if total <= 4:
+        # Prefer keeping Run alive; Daily needs three non-empty banks to be valid.
+        return (3, total - 3) if total == 4 else (0, total)
+    daily = min(DAILY_TARGET, max(3, (total + 1) // 2))
+    run = total - daily
+    if run < 1:
+        run = 1
+        daily = total - 1
+    return daily, run
 
-def pool_assignment(rank_index: int) -> tuple[str, int, int, int]:
+def pool_assignment(rank_index: int, daily_count: int, bank_sizes: list[int]) -> tuple[str, int, int, int]:
     """Return pool, pool position, Daily bank and bank position for a zero-based quality rank."""
-    if rank_index < DAILY_TARGET:
-        bank = rank_index // DAILY_BANK_SIZE + 1
-        bank_position = rank_index % DAILY_BANK_SIZE + 1
-        return "daily", rank_index + 1, bank, bank_position
-    return "run", rank_index - DAILY_TARGET + 1, 0, 0
+    if rank_index < daily_count:
+        cursor = 0
+        for bank_index, size in enumerate(bank_sizes, 1):
+            if rank_index < cursor + size:
+                return "daily", rank_index + 1, bank_index, rank_index - cursor + 1
+            cursor += size
+        return "daily", rank_index + 1, 0, 0
+    return "run", rank_index - daily_count + 1, 0, 0
 
-
-def write_reports(all_candidates: list[Candidate], chosen: list[Candidate], out_dir: Path) -> None:
+def write_reports(all_candidates: list[Candidate], chosen: list[Candidate], out_dir: Path, daily_count: int, bank_sizes: list[int]) -> None:
     out_dir.mkdir(parents=True, exist_ok=True)
     fields = list(asdict(all_candidates[0]).keys()) if all_candidates else ["item_id"]
     candidate_fields = [x for x in fields if x != "rows"] + ["quality_score", "memory_difficulty"]
@@ -670,10 +770,10 @@ def write_reports(all_candidates: list[Candidate], chosen: list[Candidate], out_
         "components", "asset", "rows"
     ]
     selected_rows = []
-    run_slice = chosen[DAILY_TARGET:DAILY_TARGET + RUN_TARGET]
+    run_slice = chosen[daily_count:]
     run_difficulty_rank = {id(c): rank for rank, c in enumerate(sorted(run_slice, key=lambda c: (memory_difficulty(c), score(c), sha_key(c.item_id))), 1)}
     for rank_index, c in enumerate(chosen):
-        pool, pool_position, daily_bank, bank_position = pool_assignment(rank_index)
+        pool, pool_position, daily_bank, bank_position = pool_assignment(rank_index, daily_count, bank_sizes)
         selected_rows.append({
             "quality_rank": rank_index + 1,
             "mode_pool": pool,
@@ -802,29 +902,32 @@ def make_contact_sheet(selected: list[Candidate], out: Path, limit: int, title: 
     sheet.save(out)
 
 
-def write_js(chosen: list[Candidate], path: Path) -> None:
-    daily = chosen[:DAILY_TARGET]
-    run = chosen[DAILY_TARGET:DAILY_TARGET + RUN_TARGET]
-    daily_banks = split_into_banks(daily, DAILY_BANK_COUNT)
+def write_js(chosen: list[Candidate], path: Path, daily_count: int, run_count: int) -> None:
+    daily = chosen[:daily_count]
+    run = chosen[daily_count:daily_count + run_count]
+    daily_banks = split_into_banks(daily, DAILY_BANK_COUNT) if daily_count >= DAILY_BANK_COUNT else [[], [], []]
+    bank_sizes = [len(bank) for bank in daily_banks]
 
-    def payload_entry(c: Candidate, rank_index: int) -> list:
-        return ["The " + c.label, c.rows, f"assets/abo/abo-{rank_index + 1:04d}.webp"]
+    def payload_entry(c: Candidate, global_rank_index: int) -> list:
+        return ["The " + c.label, c.rows, f"assets/abo/abo-{global_rank_index + 1:04d}.webp"]
 
     daily_payload = []
-    for bank_index, bank in enumerate(daily_banks):
-        base_rank = bank_index * DAILY_BANK_SIZE
-        daily_payload.append([payload_entry(c, base_rank + i) for i, c in enumerate(bank)])
+    cursor = 0
+    for bank in daily_banks:
+        daily_payload.append([payload_entry(c, cursor + i) for i, c in enumerate(bank)])
+        cursor += len(bank)
     run_payload = [
         {
             "name": "The " + c.label,
             "rows": c.rows,
-            "image": f"assets/abo/abo-{DAILY_TARGET + i + 1:04d}.webp",
+            "image": f"assets/abo/abo-{daily_count + i + 1:04d}.webp",
             "difficulty": round(memory_difficulty(c), 3),
             "quality": round(score(c), 6),
         }
         for i, c in enumerate(run)
     ]
 
+    complete = len(chosen) >= TOTAL_TARGET
     meta = {
         "source": "Amazon Berkeley Objects (ABO) catalog images",
         "datasetUrl": ABO_HOME,
@@ -832,11 +935,13 @@ def write_js(chosen: list[Candidate], path: Path) -> None:
         "count": len(chosen),
         "dailyCount": len(daily),
         "dailyBankCount": DAILY_BANK_COUNT,
-        "dailyBankSize": DAILY_BANK_SIZE,
+        "dailyBankSizes": bank_sizes,
         "runCount": len(run),
         "poolsOverlap": False,
+        "completeTarget": complete,
+        "partialBuild": not complete,
         "generatedAt": datetime.now(timezone.utc).isoformat(),
-        "selection": "global quality rank after full candidate budget; ranks 1-1095 Daily-only, 1096-2190 Run-only",
+        "selection": "global quality rank after full candidate budget; partial builds are split between disjoint Daily and Run pools",
         "previewAssets": "local 256x256 WebP crops used for the photo-to-pixel intro animation",
     }
     content = (
@@ -925,7 +1030,7 @@ def build(args) -> int:
             completed += 1
             if candidate is not None:
                 indexed_candidates.append((index, candidate))
-                if candidate.accepted:
+                if is_strict_candidate(candidate, args):
                     strict_passes += 1
             if completed % 250 == 0:
                 print(f"Completed {completed:,}/{download_count:,} images; strict passes so far: {strict_passes:,}")
@@ -937,9 +1042,12 @@ def build(args) -> int:
     all_candidates = [candidate for _index, candidate in indexed_candidates]
 
     chosen = choose_best_candidates(all_candidates, TOTAL_TARGET, set())
-    daily = chosen[:DAILY_TARGET]
-    run = chosen[DAILY_TARGET:DAILY_TARGET + RUN_TARGET]
-    write_reports(all_candidates, chosen, out)
+    daily_count, run_count = allocate_pool_counts(len(chosen))
+    daily = chosen[:daily_count]
+    run = chosen[daily_count:daily_count + run_count]
+    daily_banks = split_into_banks(daily, DAILY_BANK_COUNT) if daily_count >= DAILY_BANK_COUNT else [[], [], []]
+    bank_sizes = [len(bank) for bank in daily_banks]
+    write_reports(all_candidates, chosen, out, daily_count, bank_sizes)
     if daily:
         make_contact_sheet(daily, out / "daily-contact-sheet.png", args.sheet_limit, "Pixel Recall Daily-only ABO pool")
     if run:
@@ -948,14 +1056,17 @@ def build(args) -> int:
     summary = {
         "processed": len(all_candidates),
         "downloadAttempts": download_count,
-        "strictPasses": sum(c.accepted for c in all_candidates),
+        "strictPasses": sum(is_strict_candidate(c, args) for c in all_candidates),
+        "rankableCandidates": sum(c.accepted for c in all_candidates),
         "uniqueSelected": len(chosen),
         "targetTotal": TOTAL_TARGET,
         "dailySelected": len(daily),
         "runSelected": len(run),
         "dailyBankCount": DAILY_BANK_COUNT,
-        "dailyBankSize": DAILY_BANK_SIZE,
-        "runPoolSize": RUN_TARGET,
+        "dailyBankSizes": bank_sizes,
+        "runPoolTarget": RUN_TARGET,
+        "completeTarget": len(chosen) >= TOTAL_TARGET,
+        "partialBuild": len(chosen) < TOTAL_TARGET,
         "dailyRunOverlap": 0,
         "dataset": ABO_HOME,
         "license": ABO_LICENSE,
@@ -963,16 +1074,19 @@ def build(args) -> int:
     (out / "summary.json").write_text(json.dumps(summary, indent=2), encoding="utf8")
     print("\n" + json.dumps(summary, indent=2))
 
-    if len(chosen) != TOTAL_TARGET:
-        print(f"\nNot enough high-quality unique patterns ({len(chosen)}/{TOTAL_TARGET}).")
-        print("Deployed JS and preview assets were NOT replaced.")
-        print("Increase --max-downloads / --max-listings-per-label before weakening quality thresholds.")
+    if len(chosen) < 4 or daily_count < 3 or run_count < 1:
+        print(f"\nToo few usable unique patterns for both modes ({len(chosen)} selected).")
+        print("Need at least 3 Daily patterns (one per bank) and 1 Run pattern.")
         return 2
 
     write_selected_assets(chosen, Path(args.asset_dir))
-    write_js(chosen, Path(args.js_output))
-    print(f"\nREADY: {DAILY_TARGET} Daily-only + {RUN_TARGET} Run-only ABO objects; overlap=0.")
-    print(f"Preview assets: {args.asset_dir} ({TOTAL_TARGET} WebP files)")
+    write_js(chosen, Path(args.js_output), daily_count, run_count)
+    if len(chosen) < TOTAL_TARGET:
+        print(f"\nPARTIAL READY: {daily_count} Daily-only + {run_count} Run-only ABO objects; overlap=0.")
+        print(f"Target was {TOTAL_TARGET}, but the best {len(chosen)} usable unique patterns are deployed instead of failing.")
+    else:
+        print(f"\nREADY: {DAILY_TARGET} Daily-only + {RUN_TARGET} Run-only ABO objects; overlap=0.")
+    print(f"Preview assets: {args.asset_dir} ({len(chosen)} WebP files)")
     print(f"Source manifest: {out / 'selected-sources.csv'}")
     return 0
 
@@ -999,7 +1113,7 @@ def main() -> int:
     p.add_argument("--workers", type=int, default=16, help="parallel catalog image download/processing workers")
     p.add_argument("--listings-tar", default="", help="optional existing abo-listings.tar")
     p.add_argument("--offline", action="store_true", help="do not download metadata; cached candidate images are still reused when present")
-    p.add_argument("--max-listings-per-label", type=int, default=500)
+    p.add_argument("--max-listings-per-label", type=int, default=5000)
     p.add_argument("--max-downloads", type=int, default=30000)
     p.add_argument("--sheet-limit", type=int, default=50)
     add_quality_args(p)

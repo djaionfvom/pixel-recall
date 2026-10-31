@@ -7,7 +7,6 @@ on:
       - ".github/workflows/generate-abo.yml"
       - "tools/**"
       - "requirements-real-objects.txt"
-      - "real-object-patterns.generated.js"
   workflow_dispatch:
     inputs:
       max_downloads:
@@ -54,25 +53,26 @@ jobs:
         uses: actions/cache@v6
         with:
           path: .abo-cache
-          key: abo-catalog-v2-${{ runner.os }}-${{ env.MAX_DOWNLOADS }}
+          key: abo-catalog-v3-${{ runner.os }}-${{ env.MAX_DOWNLOADS }}
           restore-keys: |
+            abo-catalog-v3-${{ runner.os }}-
             abo-catalog-v2-${{ runner.os }}-
 
       - name: Install generator dependencies
         run: python -m pip install -r requirements-real-objects.txt
 
-      - name: Generate all ABO Daily and Run objects
+      - name: Generate ABO Daily and Run objects
         run: >-
           python tools/abo_pattern_pipeline.py build
           --target-count 2190
           --max-downloads "$MAX_DOWNLOADS"
           --workers "$ABO_WORKERS"
-          --max-listings-per-label 500
+          --max-listings-per-label 5000
           --output-dir abo-output
           --js-output real-object-patterns.generated.js
           --asset-dir assets/abo
 
-      - name: Validate generated library
+      - name: Validate full or partial generated library
         shell: bash
         run: |
           python - <<'PY'
@@ -80,34 +80,39 @@ jobs:
           from pathlib import Path
 
           summary = json.loads(Path("abo-output/summary.json").read_text())
-          expected = {
-              "uniqueSelected": 2190,
-              "dailySelected": 1095,
-              "runSelected": 1095,
-              "dailyRunOverlap": 0,
-          }
-          for key, value in expected.items():
-              actual = summary.get(key)
-              if actual != value:
-                  raise SystemExit(f"Validation failed: {key}={actual!r}, expected {value!r}")
+          selected = int(summary.get("uniqueSelected", 0))
+          daily = int(summary.get("dailySelected", 0))
+          run = int(summary.get("runSelected", 0))
+          overlap = int(summary.get("dailyRunOverlap", -1))
+          bank_sizes = summary.get("dailyBankSizes", [])
+
+          if selected < 4:
+              raise SystemExit(f"Validation failed: only {selected} usable patterns")
+          if daily < 3 or run < 1:
+              raise SystemExit(f"Validation failed: Daily={daily}, Run={run}; both modes must remain playable")
+          if overlap != 0:
+              raise SystemExit(f"Validation failed: Daily/Run overlap={overlap}")
+          if len(bank_sizes) != 3 or any(int(x) < 1 for x in bank_sizes):
+              raise SystemExit(f"Validation failed: invalid Daily bank sizes {bank_sizes!r}")
+          if daily + run != selected:
+              raise SystemExit(f"Validation failed: Daily+Run != selected ({daily}+{run}!={selected})")
 
           assets = list(Path("assets/abo").glob("abo-*.webp"))
-          if len(assets) != 2190:
-              raise SystemExit(f"Validation failed: found {len(assets)} WebP assets, expected 2190")
+          if len(assets) != selected:
+              raise SystemExit(f"Validation failed: found {len(assets)} WebP assets, expected {selected}")
 
           js = Path("real-object-patterns.generated.js").read_text(encoding="utf8")
           required = (
               "window.PIXEL_RECALL_REAL_OBJECT_BANKS",
               "window.PIXEL_RECALL_RUN_OBJECTS",
-              '"dailyCount": 1095',
-              '"runCount": 1095',
               '"poolsOverlap": false',
           )
           for marker in required:
               if marker not in js:
                   raise SystemExit(f"Validation failed: missing {marker}")
 
-          print("Validated: 1,095 Daily-only + 1,095 Run-only ABO objects, zero overlap.")
+          state = "FULL" if selected >= 2190 else "PARTIAL"
+          print(f"Validated {state} library: {daily} Daily-only + {run} Run-only = {selected}; zero overlap.")
           PY
 
       - name: Save generated library to main
@@ -128,17 +133,6 @@ jobs:
             git commit -m "Generate ABO Daily and Run libraries"
             git push origin HEAD:main
           fi
-
-      - name: Request a fresh branch-based GitHub Pages build
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        shell: bash
-        run: |
-          curl --fail-with-body -L -X POST \
-            -H "Accept: application/vnd.github+json" \
-            -H "Authorization: Bearer $GH_TOKEN" \
-            -H "X-GitHub-Api-Version: 2026-03-10" \
-            "https://api.github.com/repos/${GITHUB_REPOSITORY}/pages/builds"
 
       - name: Upload diagnostics if generation fails
         if: failure()
