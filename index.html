@@ -24,7 +24,7 @@
   <meta name="twitter:image" content="https://pixelrecall.net/og-image.png" />
 
   <link rel="icon" href="icon.svg" type="image/svg+xml" />
-  <link rel="stylesheet" href="style.css?v=v38-daily-1095-unique" />
+  <link rel="stylesheet" href="style.css?v=v45-current-abo" />
 
   <!-- Google tag (gtag.js) -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-20214X136N"></script>
@@ -97,6 +97,9 @@
 
       <div class="grid-stage">
         <div id="grid" class="grid" aria-label="Drawing grid"></div>
+        <div id="objectTransform" class="object-transform" aria-hidden="true" hidden>
+          <canvas id="objectTransformCanvas" class="object-transform-canvas"></canvas>
+        </div>
         <div id="memoryCountdown" class="memory-countdown" aria-live="polite" aria-label="Get ready countdown" hidden>
           <span id="memoryCountdownNumber" class="memory-countdown-number">3</span>
         </div>
@@ -297,7 +300,8 @@
     </section>
   </div>
 
-  <script src="backend-config.js?v=v38-daily-1095-unique"></script>
-  <script src="script.js?v=v38-daily-1095-unique"></script>
+  <script src="backend-config.js?v=v45-current-abo"></script>
+  <script src="real-object-patterns.generated.js?v=v45-current-abo"></script>
+  <script src="script.js?v=v45-current-abo"></script>
 </body>
 </html>

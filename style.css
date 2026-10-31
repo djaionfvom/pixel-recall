@@ -259,6 +259,38 @@ h1 {
   display: flow-root;
 }
 
+
+.object-transform {
+  position: absolute;
+  inset: 0;
+  z-index: 7;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  opacity: 1;
+  transition: opacity .28s ease;
+}
+
+.object-transform[hidden] {
+  display: none;
+}
+
+.object-transform.is-fading {
+  opacity: 0;
+}
+
+.object-transform-canvas {
+  display: block;
+  border-radius: 18px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, .34);
+  background: #fff;
+  image-rendering: auto;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .object-transform { transition: opacity .08s linear; }
+}
+
 .memory-countdown {
   position: absolute;
   inset: 0;
