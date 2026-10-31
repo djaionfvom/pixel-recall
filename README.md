@@ -1,8 +1,6 @@
-# Pixel Recall v45 — Current UI + ABO-only Daily/Run
+# Pixel Recall v27 — Popup Results and Leaderboard
 
 This build keeps the compact v25 design and changes only the requested gameplay/leaderboard behavior.
-
-> **Current behavior:** the historical sections below document earlier versions. v45 supersedes their built-in pattern libraries: Daily and Run now use only the generated ABO libraries described in the v45 section. The existing UI, results popups, streaks, sharing, leaderboard and Custom Challenge features are preserved.
 
 ## Daily
 
@@ -112,21 +110,3 @@ This version uses the same Run leaderboard table/functions as v24/v25. If that s
 - The overall Daily score is the rounded arithmetic mean of the three individual 0–100 scores. Example: 80%, 100%, 70% → 83%.
 - Only one final Daily result is submitted to the existing Supabase endpoint, so no backend/schema migration is required.
 - Daily streak/community statistics are updated only after all three patterns are completed.
-
-## v45 — ABO-only Daily + Run, built from the current game
-
-This package keeps the current Pixel Recall UI/gameplay code and replaces the built-in Daily and Run pattern libraries with Amazon Berkeley Objects (ABO)-derived content only.
-
-- Generator inspects up to 30,000 curated ABO catalog-image candidates and scores every strict survivor before selection.
-- The best 2,190 unique normalized 8×8 silhouettes are retained.
-- Quality ranks 1–1,095 are Daily-only; ranks 1,096–2,190 are Run-only. There is no Daily/Run silhouette overlap.
-- Daily is split into three ranked bins of 365. Each 365-day cycle uses a deterministic shuffled permutation for each bin, so each day draws one item from each bin without repeats inside that cycle.
-- Run uses the separate 1,095-object pool and preserves the current seeded Run/leaderboard/scoring system. Since ABO puzzles are 8×8, Run difficulty comes from object-shape difficulty plus progressively tighter memorization time rather than old handcrafted grid sizes.
-- For Daily and Run, the selected source photo is stored locally as a small WebP. Before memorization begins, it smoothly pixelates, desaturates and resolves into the final 8×8 binary pattern. The memorization timer starts only after the animation completes.
-- Custom challenges remain user-created and do not use a built-in pattern library.
-
-### Build on GitHub instead of locally
-
-Set GitHub Pages to **GitHub Actions**, then run **Actions → Generate ABO library and deploy Pixel Recall → Run workflow**. The currently deployed site remains live while the GitHub-hosted runner builds the new library. Deployment occurs only after all 2,190 objects and WebP assets pass validation.
-
-The normal Pages workflow is lightweight and reuses the committed generated library for later HTML/CSS/JS changes; it does not rerun the 30,000-image analysis.
