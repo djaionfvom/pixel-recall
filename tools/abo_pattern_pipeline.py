@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import gzip
 import hashlib
 import io
@@ -32,6 +33,7 @@ import re
 import shutil
 import sys
 import tarfile
+import threading
 import time
 from collections import defaultdict, deque
 from dataclasses import asdict, dataclass
@@ -849,6 +851,31 @@ def write_js(chosen: list[Candidate], path: Path) -> None:
     tmp.replace(path)
 
 
+_worker_local = threading.local()
+
+def worker_session() -> requests.Session:
+    session = getattr(_worker_local, "session", None)
+    if session is None:
+        session = requests.Session()
+        session.headers.update({
+            "User-Agent": DEFAULT_USER_AGENT,
+            "Accept": "image/avif,image/webp,image/apng,image/*,*/*;q=0.8",
+        })
+        _worker_local.session = session
+    return session
+
+def process_candidate_record(index: int, listing: Listing, cache: Path, args):
+    session = worker_session()
+    image_path, url = fetch_image(listing, cache, session)
+    if image_path is None:
+        return index, None, "download failed"
+    try:
+        candidate, _rgb, _mask = process_listing(listing, image_path, url, args)
+        return index, candidate, ""
+    except Exception as exc:
+        return index, None, str(exc)
+
+
 def build(args) -> int:
     work = Path(args.work_dir)
     out = Path(args.output_dir)
@@ -871,30 +898,43 @@ def build(args) -> int:
     if args.target_count != TOTAL_TARGET:
         raise SystemExit(f"--target-count must be {TOTAL_TARGET} for the disjoint Daily + Run build")
 
-    all_candidates: list[Candidate] = []
-    accepted_unique: set[str] = set()
-    accepted_count = 0
-    download_count = 0
-    for idx, listing in enumerate(records, 1):
-        if download_count >= args.max_downloads:
+    # Deduplicate identical main images before spending download budget.
+    unique_records = []
+    seen_images = set()
+    for listing in records:
+        if listing.image_id in seen_images:
+            continue
+        seen_images.add(listing.image_id)
+        unique_records.append(listing)
+        if len(unique_records) >= args.max_downloads:
             break
-        image_path, url = fetch_image(listing, cache, session)
-        download_count += 1
-        if image_path is None:
-            continue
-        try:
-            c, _rgb, _mask = process_listing(listing, image_path, url, args)
-        except Exception as e:
-            print(f"skip {listing.item_id}: {e}", file=sys.stderr)
-            continue
-        all_candidates.append(c)
-        if c.accepted:
-            sig = normalized_shape_signature(c.rows)
-            if sig not in accepted_unique:
-                accepted_unique.add(sig)
-                accepted_count += 1
-        if idx % 50 == 0 or c.accepted:
-            print(f"[{download_count:5d}] {'PASS' if c.accepted else '----'} {listing.label:18s} IoU={c.iou:.3f} NCC={c.ncc:.3f} unique-pass={accepted_count}")
+
+    download_count = len(unique_records)
+    print(f"Processing {download_count:,} unique catalog images with {args.workers} workers.")
+
+    indexed_candidates: list[tuple[int, Candidate]] = []
+    completed = 0
+    strict_passes = 0
+    with ThreadPoolExecutor(max_workers=max(1, args.workers)) as executor:
+        futures = [
+            executor.submit(process_candidate_record, index, listing, cache, args)
+            for index, listing in enumerate(unique_records)
+        ]
+        for future in as_completed(futures):
+            index, candidate, error = future.result()
+            completed += 1
+            if candidate is not None:
+                indexed_candidates.append((index, candidate))
+                if candidate.accepted:
+                    strict_passes += 1
+            if completed % 250 == 0:
+                print(f"Completed {completed:,}/{download_count:,} images; strict passes so far: {strict_passes:,}")
+            elif error and completed % 1000 == 0:
+                print(f"Recent candidate error: {error}", file=sys.stderr)
+
+    # Restore deterministic candidate ordering independent of thread completion order.
+    indexed_candidates.sort(key=lambda item: item[0])
+    all_candidates = [candidate for _index, candidate in indexed_candidates]
 
     chosen = choose_best_candidates(all_candidates, TOTAL_TARGET, set())
     daily = chosen[:DAILY_TARGET]
@@ -956,6 +996,7 @@ def main() -> int:
     p.add_argument("--output-dir", default="abo-output")
     p.add_argument("--js-output", default="real-object-patterns.generated.js")
     p.add_argument("--asset-dir", default="assets/abo", help="deployed local WebP preview directory")
+    p.add_argument("--workers", type=int, default=16, help="parallel catalog image download/processing workers")
     p.add_argument("--listings-tar", default="", help="optional existing abo-listings.tar")
     p.add_argument("--offline", action="store_true", help="do not download metadata; cached candidate images are still reused when present")
     p.add_argument("--max-listings-per-label", type=int, default=500)
