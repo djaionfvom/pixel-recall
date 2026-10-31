@@ -1,30 +1,3 @@
-# Pixel Recall v47 — broad ABO generation + partial fallback
-
-This revision fixes the v46 bottleneck that produced only ~2,300 candidate images and 26 selected patterns. The generator now samples the broad ABO catalog, ranks usable silhouettes globally, and deploys a partial disjoint Daily/Run library if the full 2,190 target is not reached. Daily banks may be smaller than 365; Run may contain fewer than 1,095 objects. The expensive generation workflow also no longer retriggers itself after committing generated data.
-
-# Pixel Recall v46 — GitHub ABO generation fix
-
-This package is based on the current Pixel Recall gameplay/UI, with all built-in Daily/Run pattern banks removed. Daily and Run are populated only after the GitHub ABO generator succeeds.
-
-## Important: upload the WHOLE package
-
-The previous deployment failed because only the old top-level website files reached GitHub. The repository was missing `.github/`, `tools/`, `real-object-patterns.generated.js`, and `requirements-real-objects.txt`, so GitHub had nothing that could generate the ABO library.
-
-For this version, the repository must contain at least these new paths before the server build can run:
-
-- `.github/workflows/generate-abo.yml`
-- `tools/abo_pattern_pipeline.py`
-- `requirements-real-objects.txt`
-- `real-object-patterns.generated.js`
-- `BUILD-ABO-WINDOWS.bat` (local fallback)
-- `BUILD-ABO-MAC-LINUX.command` (local fallback)
-
-You can keep GitHub Pages configured as **Deploy from a branch / main**. On the first push containing the files above, `Generate ABO library and refresh Pixel Recall` starts automatically. It processes up to 30,000 unique ABO catalog images in parallel, commits the resulting 2,190 previews + generated pattern JS to `main`, then explicitly requests a new GitHub Pages build.
-
-Until that heavy workflow succeeds, Daily and Run intentionally remain unavailable because there are no non-ABO fallback patterns.
-
----
-
 # Pixel Recall v45 — Current UI + ABO-only Daily/Run
 
 This build keeps the compact v25 design and changes only the requested gameplay/leaderboard behavior.
